@@ -59,9 +59,10 @@ void layoutSplitTopTabBars()
 	if (leftTabInfo && leftTabInfo->nativeView)
 	{
 		NSView* leftTabView = (__bridge NSView*)leftTabInfo->nativeView;
-		if (ctx().isSplit && ctx().editorContainer)
+		if (ctx().isSplit && ctx().editorContainer && ctx().splitView)
 		{
-			leftTabView.frame = NSMakeRect(ctx().editorContainer.frame.origin.x, topY,
+			CGFloat splitBaseX = ctx().splitView.frame.origin.x;
+			leftTabView.frame = NSMakeRect(splitBaseX + ctx().editorContainer.frame.origin.x, topY,
 			                               ctx().editorContainer.frame.size.width, tabHeight);
 		}
 		else
@@ -72,13 +73,14 @@ void layoutSplitTopTabBars()
 		}
 	}
 
-	if (ctx().isSplit && ctx().tabHwnd2 && ctx().editorContainer2)
+	if (ctx().isSplit && ctx().tabHwnd2 && ctx().editorContainer2 && ctx().splitView)
 	{
 		auto* rightTabInfo = HandleRegistry::getWindowInfo(ctx().tabHwnd2);
 		if (rightTabInfo && rightTabInfo->nativeView)
 		{
+			CGFloat splitBaseX = ctx().splitView.frame.origin.x;
 			NSView* rightTabView = (__bridge NSView*)rightTabInfo->nativeView;
-			rightTabView.frame = NSMakeRect(ctx().editorContainer2.frame.origin.x, topY,
+			rightTabView.frame = NSMakeRect(splitBaseX + ctx().editorContainer2.frame.origin.x, topY,
 			                                ctx().editorContainer2.frame.size.width, tabHeight);
 		}
 	}
@@ -342,6 +344,7 @@ void doUnsplit()
 	ctx().editorContainer.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 	[contentView addSubview:ctx().editorContainer];
 	ScintillaBridge_resizeToFit(ctx().scintillaView);
+	ScintillaBridge_sendMessage(ctx().scintillaView, SCI_COLOURISE, 0, -1);
 
 	ctx().documents2.clear();
 	ctx().activeTab2 = -1;
@@ -353,12 +356,12 @@ void doUnsplit()
 	if (isIncrementalSearchVisible())
 		updateIncrementalSearchTarget();
 
-	layoutSplitTopTabBars();
 	updateSplitMenuState();
 	relayoutPanels();
 	bindDocumentMapToActiveView();
 	updateDocumentMapViewport();
 	bindFunctionListToActiveView();
+	ScintillaBridge_focus(ctx().scintillaView);
 }
 
 void doMoveToOtherView()
