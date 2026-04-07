@@ -361,7 +361,8 @@ void doUnsplit()
 	bindDocumentMapToActiveView();
 	updateDocumentMapViewport();
 	bindFunctionListToActiveView();
-	ScintillaBridge_focus(ctx().scintillaView);
+	if (!isIncrementalSearchVisible())
+		ScintillaBridge_focus(ctx().scintillaView);
 }
 
 void doMoveToOtherView()
