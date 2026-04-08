@@ -294,8 +294,10 @@ void migrateTabToView(int viewIndex, const DocumentData& doc)
 	HWND tabHwnd = (viewIndex == 0) ? ctx().tabHwnd : ctx().tabHwnd2;
 
 	DocumentData newDoc = doc;
-	newDoc.functionListDocumentId = allocateFunctionListDocumentId();
-	newDoc.functionListRevision = 0;
+	// Keep the existing functionListDocumentId so cached entries remain valid.
+	// Only allocate a new one if the source didn't have one.
+	if (newDoc.functionListDocumentId == 0)
+		newDoc.functionListDocumentId = allocateFunctionListDocumentId();
 	docs.push_back(newDoc);
 
 	int newIndex = static_cast<int>(docs.size()) - 1;

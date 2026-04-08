@@ -139,6 +139,7 @@ void doSplit()
 		ctx().sciContainer2 = nil;
 		[ctx().splitView removeFromSuperview];
 		ctx().splitView = nil;
+		ctx().editorContainer.translatesAutoresizingMaskIntoConstraints = YES;
 		ctx().editorContainer.frame = originalFrame;
 		ctx().editorContainer.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 		[contentView addSubview:ctx().editorContainer];
@@ -385,17 +386,43 @@ void doUnsplit()
 	[contentView addSubview:ctx().editorContainer];
 	ScintillaBridge_resizeToFit(ctx().scintillaView);
 
-	// Migrate documents from view 2 to view 0 — preserve all tabs (no filePath dedup)
+	// Migrate documents from view 2 to view 0.
+	// Skip unmodified mirrors (same filePath already in view 0 and not modified)
+	// to avoid duplicating the initial split clone. Preserve modified clones
+	// since they may have diverged.
 	int migratedActiveIdx = -1;
 	for (int i = 0; i < static_cast<int>(docsToMigrate.size()); ++i)
 	{
 		const auto& doc = docsToMigrate[i];
-		// Skip empty untitled unmodified placeholder documents
-		if (doc.filePath.empty() && !doc.modified && doc.content.empty())
+
+		bool skip = false;
+		if (!doc.modified)
+		{
+			if (!doc.filePath.empty())
+			{
+				// Skip unmodified doc if same file already open in view 0
+				for (const auto& d : ctx().documents)
+				{
+					if (d.filePath == doc.filePath)
+					{
+						skip = true;
+						break;
+					}
+				}
+			}
+			else if (doc.content.empty())
+			{
+				// Skip empty untitled unmodified placeholder
+				skip = true;
+			}
+		}
+
+		if (skip)
 		{
 			invalidateFunctionListCacheForDocument(doc.functionListDocumentId);
 			continue;
 		}
+
 		if (wasActiveInView2 && i == view2ActiveIdx)
 			migratedActiveIdx = static_cast<int>(ctx().documents.size());
 		migrateTabToView(0, doc);
@@ -412,6 +439,8 @@ void doUnsplit()
 	    && migratedActiveIdx < static_cast<int>(ctx().documents.size()))
 	{
 		ctx().activeTab = migratedActiveIdx;
+		if (ctx().tabHwnd)
+			SendMessageW(ctx().tabHwnd, TCM_SETCURSEL, ctx().activeTab, 0);
 	}
 
 	// Restore main Scintilla content from the active document
@@ -444,12 +473,14 @@ void doUnsplit()
 	reloadFileSwitcherData();
 	updateStatusBar();
 
-	// Deferred display refresh after Cocoa completes layout
+	// Deferred display refresh after Cocoa completes layout.
+	// Capture the pointer before dispatch to avoid races with ctx() changes.
+	void* capturedSciView = ctx().scintillaView;
 	dispatch_async(dispatch_get_main_queue(), ^{
-		ScintillaBridge_resizeToFit(ctx().scintillaView);
-		if (ctx().scintillaView)
+		if (capturedSciView)
 		{
-			NSView* view = (__bridge NSView*)ctx().scintillaView;
+			ScintillaBridge_resizeToFit(capturedSciView);
+			NSView* view = (__bridge NSView*)capturedSciView;
 			[view setNeedsDisplay:YES];
 		}
 	});
