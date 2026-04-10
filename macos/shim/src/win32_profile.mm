@@ -141,16 +141,16 @@ DWORD GetPrivateProfileStringW(LPCWSTR lpAppName, LPCWSTR lpKeyName, LPCWSTR lpD
 			value = lpDefault ? wideToUtf8(lpDefault) : "";
 		}
 
+		if (!lpReturnedString || nSize == 0)
+			return 0;
+
 		NSString* nsValue = [NSString stringWithUTF8String:value.c_str()];
 		NSData* data = [nsValue dataUsingEncoding:NSUTF32LittleEndianStringEncoding];
 		size_t wcharCount = data.length / sizeof(wchar_t);
 		size_t copyLen = (wcharCount < nSize) ? wcharCount : (nSize - 1);
 
-		if (lpReturnedString && nSize > 0)
-		{
-			memcpy(lpReturnedString, data.bytes, copyLen * sizeof(wchar_t));
-			lpReturnedString[copyLen] = L'\0';
-		}
+		memcpy(lpReturnedString, data.bytes, copyLen * sizeof(wchar_t));
+		lpReturnedString[copyLen] = L'\0';
 
 		return static_cast<DWORD>(copyLen);
 	}
@@ -161,11 +161,22 @@ BOOL WritePrivateProfileStringW(LPCWSTR lpAppName, LPCWSTR lpKeyName, LPCWSTR lp
 	@autoreleasepool {
 		std::string path = wideToUtf8(lpFileName);
 		std::string section = wideToUtf8(lpAppName);
-		std::string key = wideToUtf8(lpKeyName);
-		std::string value = lpString ? wideToUtf8(lpString) : "";
 
 		IniMap ini = parseIniFile(path);
-		ini[section][key] = value;
+
+		// Win32 contract: NULL lpString deletes the key (or section if lpKeyName is also NULL)
+		if (!lpString)
+		{
+			if (!lpKeyName)
+				ini.erase(section);
+			else
+				ini[section].erase(wideToUtf8(lpKeyName));
+		}
+		else
+		{
+			std::string key = wideToUtf8(lpKeyName);
+			ini[section][key] = wideToUtf8(lpString);
+		}
 
 		return writeIniFile(path, ini) ? TRUE : FALSE;
 	}

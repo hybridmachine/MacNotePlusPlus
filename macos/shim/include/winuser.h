@@ -1979,6 +1979,8 @@ struct INPUT
 
 inline UINT SendInput(UINT nInputs, INPUT* pInputs, int cbSize)
 {
-	(void)nInputs; (void)pInputs; (void)cbSize;
-	return 0; // Stub — no input simulation on macOS
+	(void)pInputs; (void)cbSize;
+	// No-op on macOS — return nInputs to indicate "success" so callers
+	// don't treat it as failure and disable features.
+	return nInputs;
 }

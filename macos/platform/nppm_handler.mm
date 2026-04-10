@@ -256,7 +256,8 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (!lParam)
 				return static_cast<LRESULT>(path.size());
 			wchar_t* buf = reinterpret_cast<wchar_t*>(lParam);
-			wcscpy(buf, path.c_str());
+			wcsncpy(buf, path.c_str(), MAX_PATH - 1);
+			buf[MAX_PATH - 1] = L'\0';
 			return static_cast<LRESULT>(path.size());
 		}
 

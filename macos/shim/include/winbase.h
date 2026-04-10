@@ -1169,8 +1169,11 @@ DWORD GetPrivateProfileStringW(LPCWSTR lpAppName, LPCWSTR lpKeyName, LPCWSTR lpD
 BOOL WritePrivateProfileStringW(LPCWSTR lpAppName, LPCWSTR lpKeyName, LPCWSTR lpString, LPCWSTR lpFileName);
 
 // ============================================================
-// MSVC CRT safe string functions (not in tchar.h for non-tchar code)
+// MSVC CRT safe string functions — single canonical definition.
+// tchar.h defers to these via SHIM_HAS_SAFE_CRT guard.
 // ============================================================
+#ifndef SHIM_HAS_SAFE_CRT
+#define SHIM_HAS_SAFE_CRT
 
 #include <cerrno>
 #include <cstdarg>
@@ -1211,3 +1214,5 @@ inline int _snwprintf_s(wchar_t* buf, size_t sizeOfBuffer, size_t count, const w
 	va_end(args);
 	return r;
 }
+
+#endif // SHIM_HAS_SAFE_CRT
