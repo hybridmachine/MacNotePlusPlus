@@ -6381,6 +6381,15 @@ void ToggleNavigationBar()
 
 
 // Main plugin DLL function
+#ifdef __APPLE__
+// On Windows the PE loader calls DllMain by ABI contract, so the upstream
+// declaration does not need C linkage. On macOS the host plugin manager
+// invokes it explicitly via dlsym("DllMain") (see plugin_manager.mm), which
+// only works if the symbol is exported with its plain name — otherwise
+// createMenu() never runs and every funcItem stays zero-initialized,
+// producing an expandable but empty (and now non-clickable) submenu.
+extern "C"
+#endif
 BOOL APIENTRY DllMain(HINSTANCE hinstDLL, DWORD  reasonForCall, LPVOID)
  {
 	hInstance = hinstDLL;
