@@ -413,8 +413,16 @@ target_compile_options(MacNotePlusPlus PRIVATE
     -fobjc-arc
     -Wno-deprecated-declarations
 )
-# Export symbols so plugins loaded via dlopen can resolve host functions (SendMessageW, etc.)
-target_link_options(MacNotePlusPlus PRIVATE -Wl,-export_dynamic)
+# Export symbols so plugins loaded via dlopen can resolve host functions.
+# -force_load pulls every object from libwin32shim.a into the executable,
+# so plugin-only shim APIs (PathAppendW, GetPrivateProfileIntW, etc.) are
+# present in the dynamic symbol table — without it, ld drops any shim
+# .o the host itself doesn't reference, and plugins crash at runtime
+# calling through a null function pointer.
+target_link_options(MacNotePlusPlus PRIVATE
+    -Wl,-export_dynamic
+    "LINKER:-force_load,$<TARGET_FILE:win32shim>"
+)
 add_dependencies(MacNotePlusPlus AppIcon)
 add_custom_command(TARGET MacNotePlusPlus POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

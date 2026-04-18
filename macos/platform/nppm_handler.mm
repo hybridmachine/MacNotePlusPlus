@@ -179,12 +179,17 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		case NPPM_GETNPPVERSION:
 		{
-			// Return version as MAKELONG(minor, major)
-			// Major = 1, Minor = 0 for MacNote++ 1.0
-			int major = 1;
-			int minor = 0;
-			if (wParam) // ADD_ZERO_PADDING
-				minor = 0; // Already zero-padded
+			// Plugins use this to gate feature-availability checks, not to
+			// discover our product version. Reporting MacNote++ 1.0 made
+			// ComparePlus refuse to run (it requires Notepad++ >= 8.420).
+			// Report a recent Notepad++ version whose NPPM surface we emulate
+			// — 8.8.0 is past every version-gated path in vendored plugins
+			// we care about (ComparePlus has its last check at >= 8.7.6).
+			// ADD_ZERO_PADDING (wParam) is a no-op for us since MAKELONG
+			// packs the high word unambiguously.
+			const int major = 8;
+			const int minor = 800; // 8.8.0
+			(void)wParam;
 			return MAKELONG(minor, major);
 		}
 
@@ -195,6 +200,39 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				return FALSE;
 			return pluginManager().allocateCmdID(static_cast<int>(wParam), startNumber) ? TRUE : FALSE;
 		}
+
+		case NPPM_ACTIVATEDOC:
+		{
+			// Plugins use this to switch the active tab programmatically
+			// (e.g. ComparePlus's activateBufferID). Before positionFiles
+			// can move a file to the other split view, it first has to
+			// activate that buffer — if this no-ops, the wrong buffer gets
+			// moved and the compare reads the wrong text.
+			int viewIdx = static_cast<int>(wParam);
+			int tabIdx = static_cast<int>(lParam);
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			if (tabIdx < 0 || tabIdx >= static_cast<int>(viewDocs.size()))
+				return FALSE;
+			switchToTabInView(viewIdx, tabIdx);
+			return TRUE;
+		}
+
+		case NPPM_GETEDITORDEFAULTBACKGROUNDCOLOR:
+			// Returned as 0x00BBGGRR (Win32 COLORREF). White matches our
+			// default light-mode Scintilla background. Plugins derive
+			// dependent colors (ComparePlus's "blank" marker shade) from
+			// this; returning 0 / black made the whole diff wash read as
+			// near-black, hiding the actual marker colors.
+			// TODO Phase 5: dark-mode branch.
+			return 0x00FFFFFF;
+
+		case NPPM_GETEDITORDEFAULTFOREGROUNDCOLOR:
+			return 0x00000000;
+
+		case NPPM_ISDARKMODEENABLED:
+			// Until we wire up real dark-mode detection, report light mode.
+			// ComparePlus picks its color palette based on this.
+			return FALSE;
 
 		case NPPM_ALLOCATEMARKER:
 		{

@@ -30,7 +30,14 @@ MacPluginInfo::~MacPluginInfo()
 	if (_pluginMenu)
 		::DestroyMenu(_pluginMenu);
 	if (_hLib)
+	{
+		// Give the plugin a chance to run its DllMain(DLL_PROCESS_DETACH)
+		// teardown before we dlclose. Mirrors Windows PE loader semantics.
+		using PDLLMAIN = BOOL (APIENTRY*)(HINSTANCE, DWORD, LPVOID);
+		if (auto pDllMain = reinterpret_cast<PDLLMAIN>(::GetProcAddress(_hLib, "DllMain")))
+			pDllMain(_hLib, DLL_PROCESS_DETACH, nullptr);
 		::FreeLibrary(_hLib);
+	}
 }
 
 // ============================================================
@@ -152,6 +159,23 @@ int MacPluginManager::loadPluginFromPath(const std::wstring& pluginFilePath)
 	{
 		NSLog(@"Failed to load plugin %@: dlopen error", fileName);
 		return -1;
+	}
+
+	// Invoke the plugin's DllMain(DLL_PROCESS_ATTACH) manually.
+	// On Windows the PE loader does this automatically on LoadLibrary.
+	// On macOS dyld does not — so any plugin that initializes its menu
+	// tables (createMenu()) or other per-load state inside DllMain gets
+	// skipped, and getFuncsArray() later returns an array of
+	// zero-initialized FuncItems. That's why the ComparePlus submenu was
+	// appearing empty: funcItem[]._pFunc stayed nullptr for every entry.
+	//
+	// The symbol must be exported with C linkage on macOS — ComparePlus
+	// does this under __APPLE__. If a plugin doesn't export DllMain at
+	// all, skip silently (not all plugins need it).
+	using PDLLMAIN = BOOL (APIENTRY*)(HINSTANCE, DWORD, LPVOID);
+	if (auto pDllMain = reinterpret_cast<PDLLMAIN>(::GetProcAddress(pi->_hLib, "DllMain")))
+	{
+		pDllMain(pi->_hLib, DLL_PROCESS_ATTACH, nullptr);
 	}
 
 	// Resolve isUnicode (optional check)

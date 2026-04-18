@@ -5,6 +5,16 @@
 #include <cwctype>
 #include <cstring>
 
+// All function declarations below use C linkage so shim .mm implementations
+// (where BOOL is inherited from ObjC as `bool`) and plugin .cpp callers
+// (where BOOL is `int`) resolve to the same unmangled symbol. Without this,
+// functions with BOOL parameters — MoveWindow, InvalidateRect,
+// EnumChildWindows, etc. — mangle differently on the two sides and the
+// plugin's call dispatches through a null pointer at runtime.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ============================================================
 // Window Messages
 // ============================================================
@@ -1984,3 +1994,7 @@ inline UINT SendInput(UINT nInputs, INPUT* pInputs, int cbSize)
 	// don't treat it as failure and disable features.
 	return nInputs;
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
