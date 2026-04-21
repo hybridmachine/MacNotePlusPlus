@@ -21,6 +21,7 @@
 #include "handle_registry.h"
 #include "settings_manager.h"
 #include "plugin_manager.h"
+#include "plugin_invariants.h"
 #include "Notepad_plus_msgs.h"
 #include "file_monitor_mac.h"
 #include "brace_match.h"
@@ -555,6 +556,7 @@ static void setDockIconFromLogo()
 		nppData._nppHandle = ctx().mainHwnd;
 		nppData._scintillaMainHandle = ctx().scintillaMainHwnd;
 		nppData._scintillaSecondHandle = ctx().scintillaSecondHwnd;
+		assertPluginPreInitInvariants();
 		pluginManager().init(nppData);
 		pluginManager().loadPlugins();
 		pluginManager().initMenu(getPluginsMenuHandle());
@@ -567,6 +569,7 @@ static void setDockIconFromLogo()
 		readyNotif.nmhdr.code = NPPN_READY;
 		pluginManager().notify(&readyNotif);
 	}
+	dumpPluginPostReadyState();
 
 	// Signal plugins that toolbar is ready for icon registration
 	{
