@@ -11,6 +11,7 @@
 #include "file_operations.h"
 #include "menu_builder.h"
 #include "string_utils.h"
+#include "compare_plus_visibility.h"
 #include "Notepad_plus_msgs.h"
 #include "Scintilla.h"
 
@@ -352,6 +353,28 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case NPPM_ADDSCNMODIFIEDFLAGS:
 			// Accept the flags but no-op for now — our host already forwards
 			// all SCN_MODIFIED notifications to plugins
+			return TRUE;
+
+		case NPPM_SETLINENUMBERWIDTHMODE:
+			return handleLineNumberWidthModeChange(static_cast<int>(lParam));
+
+		case NPPM_GETLINENUMBERWIDTHMODE:
+			// Report dynamic so the plugin always decides to set CONSTANT on entry
+			return LINENUMWIDTH_DYNAMIC;
+
+		case NPPM_HIDETABBAR:
+			// Cosmetic no-op on macOS (no tab bar to hide). The plugin uses this
+			// as a tab-repaint side effect, not a mode indicator — do not treat
+			// it as a compare-mode trigger.
+			return TRUE;
+
+		case NPPM_SETSTATUSBAR:
+			// Cosmetic no-op. Plugin posts "Compared X vs Y" strings we ignore.
+			return TRUE;
+
+		case NPPM_ADDTOOLBARICON_FORDARKMODE:
+			// Plugin tries to register toolbar icons during NPPN_TBMODIFICATION.
+			// V1 has no compare-specific toolbar; accept the call silently.
 			return TRUE;
 
 		default:

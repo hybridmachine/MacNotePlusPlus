@@ -386,6 +386,7 @@ add_executable(MacNotePlusPlus
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/macro_manager.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_manager.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/nppm_handler.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/compare_plus_visibility.mm"
 )
 target_include_directories(MacNotePlusPlus PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/platform"
