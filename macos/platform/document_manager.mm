@@ -23,10 +23,16 @@
 #include "win32_tab_control_impl.h"
 
 static uint64_t sNextFunctionListDocumentId = 1;
+static uint64_t sNextBufferId = 1;
 
 uint64_t allocateFunctionListDocumentId()
 {
 	return sNextFunctionListDocumentId++;
+}
+
+uint64_t allocateBufferId()
+{
+	return sNextBufferId++;
 }
 
 void saveViewState(void* sci, std::vector<DocumentData>& docs, int tabIdx)
@@ -142,6 +148,15 @@ void switchToTabInView(int viewIndex, int tabIndex)
 	NSString* title = WideToNSString(doc.title.c_str());
 	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", title]];
 	updateWindowDocumentEdited();
+
+	// Notify plugins that a buffer was activated
+	{
+		SCNotification notif{};
+		notif.nmhdr.hwndFrom = ctx().mainHwnd;
+		notif.nmhdr.code = NPPN_BUFFERACTIVATED;
+		notif.nmhdr.idFrom = static_cast<uintptr_t>(doc.bufferId);
+		pluginManager().notify(&notif);
+	}
 }
 
 void switchToTab(int tabIndex)
@@ -168,6 +183,7 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 	doc.languageIndex = langIndex;
 	doc.functionListDocumentId = allocateFunctionListDocumentId();
 	doc.functionListRevision = 0;
+	doc.bufferId = allocateBufferId();
 	docs.push_back(doc);
 
 	int newIndex = static_cast<int>(docs.size()) - 1;
@@ -226,12 +242,14 @@ void closeTabFromView(int viewIndex, int tabIndex)
 		return;
 	if (!sci) return;
 
+	const uint64_t closingBufferId = docs[tabIndex].bufferId;
+
 	// Notify plugins that a file is about to be closed
 	{
 		SCNotification notif{};
 		notif.nmhdr.hwndFrom = ctx().mainHwnd;
 		notif.nmhdr.code = NPPN_FILEBEFORECLOSE;
-		notif.nmhdr.idFrom = 0; // V1: no stable buffer ID yet
+		notif.nmhdr.idFrom = static_cast<uintptr_t>(closingBufferId);
 		pluginManager().notify(&notif);
 	}
 
@@ -242,6 +260,7 @@ void closeTabFromView(int viewIndex, int tabIndex)
 		docs[0] = DocumentData();
 		docs[0].functionListDocumentId = allocateFunctionListDocumentId();
 		docs[0].functionListRevision = 0;
+		docs[0].bufferId = allocateBufferId();
 		ctx().suppressSavePointNotifications = true;
 		ScintillaBridge_sendMessage(sci, SCI_CLEARALL, 0, 0);
 		ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
@@ -265,7 +284,7 @@ void closeTabFromView(int viewIndex, int tabIndex)
 			SCNotification notif{};
 			notif.nmhdr.hwndFrom = ctx().mainHwnd;
 			notif.nmhdr.code = NPPN_FILECLOSED;
-			notif.nmhdr.idFrom = 0;
+			notif.nmhdr.idFrom = static_cast<uintptr_t>(closingBufferId);
 			pluginManager().notify(&notif);
 		}
 		return;
@@ -307,7 +326,7 @@ void closeTabFromView(int viewIndex, int tabIndex)
 		SCNotification notif{};
 		notif.nmhdr.hwndFrom = ctx().mainHwnd;
 		notif.nmhdr.code = NPPN_FILECLOSED;
-		notif.nmhdr.idFrom = 0;
+		notif.nmhdr.idFrom = static_cast<uintptr_t>(closingBufferId);
 		pluginManager().notify(&notif);
 	}
 }

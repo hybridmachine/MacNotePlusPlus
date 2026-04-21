@@ -522,6 +522,12 @@ void doUnsplit()
 
 void doMoveToOtherView()
 {
+	// On upstream Notepad++, "Move to Other View" implicitly splits the
+	// layout if it isn't split yet. Our previous behavior silently no-op'd
+	// when invoked pre-split, which broke plugins (e.g. ComparePlus)
+	// that send IDM_VIEW_GOTO_ANOTHER_VIEW expecting a split to be set up.
+	if (!ctx().isSplit)
+		doSplit();
 	if (!ctx().isSplit || !ctx().scintillaView || !ctx().scintillaView2) return;
 
 	int srcView = ctx().activeView;
@@ -556,6 +562,8 @@ void doMoveToOtherView()
 
 void doCloneToOtherView()
 {
+	if (!ctx().isSplit)
+		doSplit();
 	if (!ctx().isSplit || !ctx().scintillaView || !ctx().scintillaView2) return;
 
 	int srcView = ctx().activeView;

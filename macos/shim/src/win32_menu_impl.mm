@@ -260,7 +260,11 @@ static NSMenuItem* findMenuItem(NSMenu* menu, UINT uItem, UINT uFlags)
 			return [menu itemAtIndex:uItem];
 		return nil;
 	}
-	// By command ID
+	// By command ID. tag == 0 is our sentinel for submenu parents and
+	// separators (see createMenuItemFromFlags) — never a valid command id, so
+	// refuse to match to avoid accidentally hitting a popup header.
+	if (uItem == 0)
+		return nil;
 	for (NSInteger i = 0; i < [menu numberOfItems]; ++i)
 	{
 		NSMenuItem* item = [menu itemAtIndex:i];
@@ -274,6 +278,10 @@ static NSMenuItem* findMenuItem(NSMenu* menu, UINT uItem, UINT uFlags)
 static NSMenuItem* findMenuItemRecursive(NSMenu* menu, UINT cmdId)
 {
 	if (!menu) return nil;
+	// See findMenuItem: cmdId 0 collides with the sentinel tag used for
+	// submenu parents, so treat it as "no such command".
+	if (cmdId == 0)
+		return nil;
 	for (NSInteger i = 0; i < [menu numberOfItems]; ++i)
 	{
 		NSMenuItem* item = [menu itemAtIndex:i];

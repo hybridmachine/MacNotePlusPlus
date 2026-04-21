@@ -3,6 +3,12 @@
 
 #include "windef.h"
 
+// C linkage for all declarations — see note in winuser.h for why BOOL
+// parameter mangling forces this.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ============================================================
 // Path functions (implemented in win32_string.mm)
 // ============================================================
@@ -168,3 +174,7 @@ inline COLORREF ColorAdjustLumaStub(COLORREF clrRGB, int n, BOOL fScale) {
 	(void)n; (void)fScale;
 	return clrRGB;
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

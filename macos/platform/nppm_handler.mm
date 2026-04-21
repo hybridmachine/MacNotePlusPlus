@@ -7,11 +7,39 @@
 #include "scintilla_bridge.h"
 #include "language_defs.h"
 #include "lexer_styles.h"
+#include "document_manager.h"
+#include "file_operations.h"
+#include "menu_builder.h"
+#include "string_utils.h"
 #include "Notepad_plus_msgs.h"
 #include "Scintilla.h"
 
 #include <cwchar>
 #include <filesystem>
+
+// ============================================================
+// Helper: find a document by buffer ID across both views
+// Returns (viewIndex, tabIndex) or (-1, -1) if not found.
+// When priorityView is specified, that view is searched first.
+// ============================================================
+static std::pair<int, int> findDocByBufferId(uint64_t bufferId, int priorityView = 0)
+{
+	auto searchView = [&](int viewIdx) -> std::pair<int, int>
+	{
+		auto& docs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+		for (int i = 0; i < static_cast<int>(docs.size()); ++i)
+		{
+			if (docs[i].bufferId == bufferId)
+				return {viewIdx, i};
+		}
+		return {-1, -1};
+	};
+
+	auto result = searchView(priorityView);
+	if (result.first >= 0)
+		return result;
+	return searchView(priorityView == 0 ? 1 : 0);
+}
 
 // ============================================================
 // Helper: copy wide string to plugin buffer with two-call contract
@@ -72,7 +100,7 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				SCNotification notif{};
 				notif.nmhdr.hwndFrom = hWnd;
 				notif.nmhdr.code = NPPN_LANGCHANGED;
-				notif.nmhdr.idFrom = 0;
+				notif.nmhdr.idFrom = static_cast<uintptr_t>(docs[tabIdx].bufferId);
 				pluginManager().notify(&notif);
 			}
 			return TRUE;
@@ -118,6 +146,15 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 		}
 
+		case NPPM_GETMENUHANDLE:
+		{
+			int menuChoice = static_cast<int>(wParam);
+			if (menuChoice == NPPMAINMENU)
+				return reinterpret_cast<LRESULT>(GetMenu(hWnd));
+			else // NPPPLUGINMENU
+				return reinterpret_cast<LRESULT>(getPluginsMenuHandle());
+		}
+
 		case NPPM_GETPLUGINSCONFIGDIR:
 		{
 			@autoreleasepool {
@@ -142,12 +179,17 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		case NPPM_GETNPPVERSION:
 		{
-			// Return version as MAKELONG(minor, major)
-			// Major = 1, Minor = 0 for MacNote++ 1.0
-			int major = 1;
-			int minor = 0;
-			if (wParam) // ADD_ZERO_PADDING
-				minor = 0; // Already zero-padded
+			// Plugins use this to gate feature-availability checks, not to
+			// discover our product version. Reporting MacNote++ 1.0 made
+			// ComparePlus refuse to run (it requires Notepad++ >= 8.420).
+			// Report a recent Notepad++ version whose NPPM surface we emulate
+			// — 8.8.0 is past every version-gated path in vendored plugins
+			// we care about (ComparePlus has its last check at >= 8.7.6).
+			// ADD_ZERO_PADDING (wParam) is a no-op for us since MAKELONG
+			// packs the high word unambiguously.
+			const int major = 8;
+			const int minor = 800; // 8.8.0
+			(void)wParam;
 			return MAKELONG(minor, major);
 		}
 
@@ -158,6 +200,39 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				return FALSE;
 			return pluginManager().allocateCmdID(static_cast<int>(wParam), startNumber) ? TRUE : FALSE;
 		}
+
+		case NPPM_ACTIVATEDOC:
+		{
+			// Plugins use this to switch the active tab programmatically
+			// (e.g. ComparePlus's activateBufferID). Before positionFiles
+			// can move a file to the other split view, it first has to
+			// activate that buffer — if this no-ops, the wrong buffer gets
+			// moved and the compare reads the wrong text.
+			int viewIdx = static_cast<int>(wParam);
+			int tabIdx = static_cast<int>(lParam);
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			if (tabIdx < 0 || tabIdx >= static_cast<int>(viewDocs.size()))
+				return FALSE;
+			switchToTabInView(viewIdx, tabIdx);
+			return TRUE;
+		}
+
+		case NPPM_GETEDITORDEFAULTBACKGROUNDCOLOR:
+			// Returned as 0x00BBGGRR (Win32 COLORREF). White matches our
+			// default light-mode Scintilla background. Plugins derive
+			// dependent colors (ComparePlus's "blank" marker shade) from
+			// this; returning 0 / black made the whole diff wash read as
+			// near-black, hiding the actual marker colors.
+			// TODO Phase 5: dark-mode branch.
+			return 0x00FFFFFF;
+
+		case NPPM_GETEDITORDEFAULTFOREGROUNDCOLOR:
+			return 0x00000000;
+
+		case NPPM_ISDARKMODEENABLED:
+			// Until we wire up real dark-mode detection, report light mode.
+			// ComparePlus picks its color palette based on this.
+			return FALSE;
 
 		case NPPM_ALLOCATEMARKER:
 		{
@@ -177,6 +252,107 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				return FALSE;
 			return pluginManager().allocateIndicator(static_cast<int>(wParam), startNumber) ? TRUE : FALSE;
 		}
+
+		// ---- Buffer ID messages (Phase 1b, issue #100) ----
+
+		case NPPM_GETCURRENTBUFFERID:
+		{
+			if (tabIdx >= 0 && tabIdx < static_cast<int>(docs.size()))
+				return static_cast<LRESULT>(docs[tabIdx].bufferId);
+			return 0;
+		}
+
+		case NPPM_GETBUFFERIDFROMPOS:
+		{
+			int index = static_cast<int>(wParam);
+			int viewIdx = static_cast<int>(lParam);
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			if (index < 0 || index >= static_cast<int>(viewDocs.size()))
+				return 0; // NULL = invalid
+			return static_cast<LRESULT>(viewDocs[index].bufferId);
+		}
+
+		case NPPM_GETPOSFROMBUFFERID:
+		{
+			uint64_t bufferId = static_cast<uint64_t>(wParam);
+			int priorityView = static_cast<int>(lParam);
+			auto [viewIdx, tabIndex] = findDocByBufferId(bufferId, priorityView);
+			if (viewIdx < 0)
+				return -1;
+			// VIEW in 2 highest bits, INDEX in lower 30 bits
+			return static_cast<LRESULT>((viewIdx << 30) | tabIndex);
+		}
+
+		case NPPM_GETFULLPATHFROMBUFFERID:
+		{
+			uint64_t bufferId = static_cast<uint64_t>(wParam);
+			auto [viewIdx, tabIndex] = findDocByBufferId(bufferId);
+			if (viewIdx < 0)
+				return -1;
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			const std::wstring& path = viewDocs[tabIndex].filePath;
+			if (!lParam)
+				return static_cast<LRESULT>(path.size());
+			wchar_t* buf = reinterpret_cast<wchar_t*>(lParam);
+			wcsncpy(buf, path.c_str(), MAX_PATH - 1);
+			buf[MAX_PATH - 1] = L'\0';
+			return static_cast<LRESULT>(path.size());
+		}
+
+		case NPPM_GETBUFFERLANGTYPE:
+		{
+			uint64_t bufferId = static_cast<uint64_t>(wParam);
+			auto [viewIdx, tabIndex] = findDocByBufferId(bufferId);
+			if (viewIdx < 0)
+				return -1;
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			return static_cast<LRESULT>(viewDocs[tabIndex].languageIndex);
+		}
+
+		case NPPM_SETBUFFERLANGTYPE:
+		{
+			uint64_t bufferId = static_cast<uint64_t>(wParam);
+			int langType = static_cast<int>(lParam);
+			auto [viewIdx, tabIndex] = findDocByBufferId(bufferId);
+			if (viewIdx < 0)
+				return FALSE;
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			viewDocs[tabIndex].languageIndex = langType;
+			// If this buffer is currently active, apply the language
+			if (viewIdx == ctx().activeView && tabIndex == ctx().activeTabIndex())
+				applyLanguage(langType);
+			return TRUE;
+		}
+
+		// ---- File operation messages (Phase 1b, issue #100) ----
+
+		case NPPM_DOOPEN:
+		{
+			if (!lParam)
+				return FALSE;
+			const wchar_t* path = reinterpret_cast<const wchar_t*>(lParam);
+			@autoreleasepool {
+				NSString* nsPath = WideToNSString(path);
+				return openFileAtPath(nsPath) ? TRUE : FALSE;
+			}
+		}
+
+		case NPPM_SWITCHTOFILE:
+		{
+			if (!lParam)
+				return FALSE;
+			const wchar_t* path = reinterpret_cast<const wchar_t*>(lParam);
+			std::wstring wpath(path);
+			return switchToFileIfOpen(wpath) ? TRUE : FALSE;
+		}
+
+		case NPPM_GETCURRENTNATIVELANGENCODING:
+			return 65001; // UTF-8 code page
+
+		case NPPM_ADDSCNMODIFIEDFLAGS:
+			// Accept the flags but no-op for now — our host already forwards
+			// all SCN_MODIFIED notifications to plugins
+			return TRUE;
 
 		default:
 			NSLog(@"Unhandled NPPM message: 0x%X (offset +%d)", msg, msg - NPPMSG);

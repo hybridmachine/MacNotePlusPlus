@@ -413,8 +413,16 @@ target_compile_options(MacNotePlusPlus PRIVATE
     -fobjc-arc
     -Wno-deprecated-declarations
 )
-# Export symbols so plugins loaded via dlopen can resolve host functions (SendMessageW, etc.)
-target_link_options(MacNotePlusPlus PRIVATE -Wl,-export_dynamic)
+# Export symbols so plugins loaded via dlopen can resolve host functions.
+# -force_load pulls every object from libwin32shim.a into the executable,
+# so plugin-only shim APIs (PathAppendW, GetPrivateProfileIntW, etc.) are
+# present in the dynamic symbol table — without it, ld drops any shim
+# .o the host itself doesn't reference, and plugins crash at runtime
+# calling through a null function pointer.
+target_link_options(MacNotePlusPlus PRIVATE
+    -Wl,-export_dynamic
+    "LINKER:-force_load,$<TARGET_FILE:win32shim>"
+)
 add_dependencies(MacNotePlusPlus AppIcon)
 add_custom_command(TARGET MacNotePlusPlus POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -454,6 +462,60 @@ add_custom_target(install_sample_plugin
         "$<TARGET_FILE:HelloMacNote>"
         "$ENV{HOME}/Library/Application Support/MacNote++/plugins/HelloMacNote/HelloMacNote.dylib"
     COMMENT "Installing HelloMacNote plugin to ~/Library/Application Support/MacNote++/plugins/"
+)
+
+# ============================================================
+# Plugin: ComparePlus (macOS port)
+# ============================================================
+set(COMPARE_PLUS_DIR "${NPP_ROOT}/plugins/comparePlus")
+
+add_library(ComparePlus MODULE
+    "${COMPARE_PLUS_DIR}/src/Compare.cpp"
+    "${COMPARE_PLUS_DIR}/src/NppHelpers.cpp"
+    "${COMPARE_PLUS_DIR}/src/Tools.cpp"
+    "${COMPARE_PLUS_DIR}/src/Strings.cpp"
+    "${COMPARE_PLUS_DIR}/src/UserSettings.cpp"
+    "${COMPARE_PLUS_DIR}/src/Engine/Engine.cpp"
+    "${COMPARE_PLUS_DIR}/src/macOS/MacCompatStubs.cpp"
+)
+target_include_directories(ComparePlus PRIVATE
+    "${SHIM_INCLUDE_DIR}"
+    "${COMPARE_PLUS_DIR}/src/NppAPI"
+    "${COMPARE_PLUS_DIR}/src"
+    "${COMPARE_PLUS_DIR}/src/Engine"
+    "${COMPARE_PLUS_DIR}/src/Icons"
+    "${COMPARE_PLUS_DIR}/src/nlohmann"
+    "${COMPARE_PLUS_DIR}/src/AboutDlg"
+    "${COMPARE_PLUS_DIR}/src/SettingsDlg"
+    "${COMPARE_PLUS_DIR}/src/CompareOptionsDlg"
+    "${COMPARE_PLUS_DIR}/src/VisualFiltersDlg"
+    "${COMPARE_PLUS_DIR}/src/NavDlg"
+    "${COMPARE_PLUS_DIR}/src/ProgressDlg"
+    "${COMPARE_PLUS_DIR}/src/NppAPI/DockingFeature"
+    "${COMPARE_PLUS_DIR}/src/boost_regex/include"
+    "${SCINTILLA_INCLUDE_DIR}"
+)
+target_compile_definitions(ComparePlus PRIVATE
+    UNICODE
+    _UNICODE
+    BOOST_REGEX_STANDALONE
+)
+set_target_properties(ComparePlus PROPERTIES
+    PREFIX ""
+    SUFFIX ".dylib"
+    OUTPUT_NAME "ComparePlus"
+)
+target_compile_options(ComparePlus PRIVATE -Wno-deprecated-declarations)
+target_link_options(ComparePlus PRIVATE -undefined dynamic_lookup)
+
+add_custom_target(install_compare_plus
+    DEPENDS ComparePlus
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/ComparePlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:ComparePlus>"
+        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/ComparePlus/ComparePlus.dylib"
+    COMMENT "Installing ComparePlus plugin to ~/Library/Application Support/MacNote++/plugins/"
 )
 
 # ============================================================

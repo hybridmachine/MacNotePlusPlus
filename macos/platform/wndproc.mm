@@ -79,7 +79,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						SCNotification notif{};
 						notif.nmhdr.hwndFrom = ctx().mainHwnd;
 						notif.nmhdr.code = NPPN_LANGCHANGED;
-						notif.nmhdr.idFrom = 0; // V1: no stable buffer ID yet
+						notif.nmhdr.idFrom = static_cast<uintptr_t>(docs[tabIdx].bufferId);
 						pluginManager().notify(&notif);
 					}
 				}
@@ -615,9 +615,11 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					doUnsplit();
 					return 0;
 				case IDM_VIEW_MOVETOOTHER:
+				case 10001: // IDM_VIEW_GOTO_ANOTHER_VIEW — used by ComparePlus & other plugins
 					doMoveToOtherView();
 					return 0;
 				case IDM_VIEW_CLONETOOTHER:
+				case 10002: // IDM_VIEW_CLONE_TO_ANOTHER_VIEW — used by plugins
 					doCloneToOtherView();
 					return 0;
 
