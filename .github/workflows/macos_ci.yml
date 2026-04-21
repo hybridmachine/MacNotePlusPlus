@@ -60,9 +60,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: macos/build
-          key: macos-build-${{ matrix.runner }}-${{ hashFiles('macos/CMakeLists.txt', 'macos/shim/**', 'macos/platform/**') }}
+          key: macos-build-v2-${{ matrix.runner }}-${{ hashFiles('macos/CMakeLists.txt', 'macos/shim/**', 'macos/platform/**') }}
           restore-keys: |
-            macos-build-${{ matrix.runner }}-
+            macos-build-v2-${{ matrix.runner }}-
 
       - name: CMake configure
         working-directory: macos/build
