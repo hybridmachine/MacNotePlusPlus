@@ -8,6 +8,8 @@
 
 long handleLineNumberWidthModeChange(int mode)
 {
+    ctx().lineNumberWidthMode = mode;
+
     if (mode == LINENUMWIDTH_CONSTANT)
     {
         // Entering compare mode. If the user hasn't already split, split now
@@ -20,10 +22,13 @@ long handleLineNumberWidthModeChange(int mode)
     }
     else
     {
-        // Exiting compare mode. Only unsplit if we were the ones who split.
-        if (ctx().hostInitiatedSplit && ctx().isSplit)
+        // Exiting compare mode. Always clear hostInitiatedSplit so a manual
+        // unsplit during compare cannot leak the flag into a later
+        // user-initiated split.
+        if (ctx().hostInitiatedSplit)
         {
-            doUnsplit();
+            if (ctx().isSplit)
+                doUnsplit();
             ctx().hostInitiatedSplit = false;
         }
     }

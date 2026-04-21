@@ -1,7 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #include "plugin_invariants.h"
 #include "app_state.h"
-#include "plugin_manager.h"
 #include "menu_builder.h"
 
 static bool debugEnabled()

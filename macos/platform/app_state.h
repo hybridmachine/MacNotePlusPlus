@@ -71,6 +71,11 @@ struct AppContext
 	// mode. Distinct from `isSplit`, which reflects any split regardless of
 	// origin (user-initiated splits are NOT torn down on compare exit).
 	bool hostInitiatedSplit = false;
+	// Last value a plugin passed to NPPM_SETLINENUMBERWIDTHMODE. Tracked so
+	// NPPM_GETLINENUMBERWIDTHMODE reports the actual current mode rather than
+	// a fixed default, preserving the Win32 set/get round-trip contract.
+	// 0 = LINENUMWIDTH_DYNAMIC (default), 1 = LINENUMWIDTH_CONSTANT.
+	int lineNumberWidthMode = 0;
 	int activeView = 0; // 0=main, 1=sub
 	std::vector<DocumentData> documents2;
 	int activeTab2 = -1;

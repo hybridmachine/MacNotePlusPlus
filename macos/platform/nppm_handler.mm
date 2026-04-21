@@ -359,8 +359,10 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return handleLineNumberWidthModeChange(static_cast<int>(lParam));
 
 		case NPPM_GETLINENUMBERWIDTHMODE:
-			// Report dynamic so the plugin always decides to set CONSTANT on entry
-			return LINENUMWIDTH_DYNAMIC;
+			// Report the last value set via NPPM_SETLINENUMBERWIDTHMODE so
+			// set/get round-trips match the Win32 contract. Defaults to
+			// LINENUMWIDTH_DYNAMIC (0) until a plugin sets it.
+			return ctx().lineNumberWidthMode;
 
 		case NPPM_HIDETABBAR:
 			// Cosmetic no-op on macOS (no tab bar to hide). The plugin uses this
