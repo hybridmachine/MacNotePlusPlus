@@ -508,7 +508,7 @@ BOOL SetFileAttributesW(LPCWSTR lpFileName, DWORD dwFileAttributes);
 BOOL DeleteFileW(LPCWSTR lpFileName);
 #define DeleteFile DeleteFileW
 
-BOOL CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIfExists);
+extern "C" BOOL CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIfExists);
 #define CopyFile CopyFileW
 
 #define COPY_FILE_FAIL_IF_EXISTS     0x00000001
@@ -627,7 +627,7 @@ BOOL SetEnvironmentVariableW(LPCWSTR lpName, LPCWSTR lpValue);
 int MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr,
                         int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
 
-int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr,
+extern "C" int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr,
                         int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte,
                         LPCSTR lpDefaultChar, LPBOOL lpUsedDefaultChar);
 
