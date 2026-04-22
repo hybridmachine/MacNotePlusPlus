@@ -162,9 +162,6 @@ intptr_t AboutDialog::run_dlgProc(UINT, WPARAM, LPARAM)     { return 0; }
 UINT     VisualFiltersDialog::doDialog(UserSettings*)       { return 0; }
 intptr_t VisualFiltersDialog::run_dlgProc(UINT, WPARAM, LPARAM)  { return 0; }
 
-UINT     SettingsDialog::doDialog(UserSettings*)            { return 0; }
-intptr_t SettingsDialog::run_dlgProc(UINT, WPARAM, LPARAM)  { return 0; }
-
 // ---------------------------------------------------------------------------
 // URLCtrl / ColorCombo — members of AboutDialog and SettingsDialog
 // respectively. Anchor their vtables with one out-of-line virtual each.

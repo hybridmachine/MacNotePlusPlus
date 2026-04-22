@@ -144,7 +144,15 @@ HWND createDialogControl(const DlgControlDescriptor& desc,
 		}
 		case DlgControlClass::ColorCombo:
 		{
+			// ColorCombo is a Win32 owner-draw combo; on macOS we render
+			// an NSColorWell read-only preview of whatever setColor()
+			// applied. Bidirectional color editing lands in a follow-up
+			// (requires bridging NSColorWell.color <-> ColorCombo::_color,
+			// which couples the shim to a plugin type). Disabling user
+			// interaction prevents the "picked a color that didn't save"
+			// confusion.
 			NSColorWell* well = [[NSColorWell alloc] initWithFrame:frame];
+			well.enabled = NO;
 			[parent addSubview:well];
 			return registerDialogChild(well, desc, ownerDialog, ControlType::None, L"ColorCombo");
 		}
