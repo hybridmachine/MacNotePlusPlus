@@ -7,6 +7,7 @@
 #ifdef __APPLE__
 
 #import <Foundation/Foundation.h>
+#include "windows.h"             // IDOK / IDCANCEL
 #include "dialog_template.h"
 
 // Pull in plugin resource IDs so renames in the plugin source stay in

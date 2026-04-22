@@ -159,9 +159,6 @@ int  NavDialog::NavView::docToBmpLine(intptr_t) const { return 0; }
 UINT     AboutDialog::doDialog()                            { return 0; }
 intptr_t AboutDialog::run_dlgProc(UINT, WPARAM, LPARAM)     { return 0; }
 
-UINT     CompareOptionsDialog::doDialog(UserSettings*)      { return 0; }
-intptr_t CompareOptionsDialog::run_dlgProc(UINT, WPARAM, LPARAM) { return 0; }
-
 UINT     VisualFiltersDialog::doDialog(UserSettings*)       { return 0; }
 intptr_t VisualFiltersDialog::run_dlgProc(UINT, WPARAM, LPARAM)  { return 0; }
 
