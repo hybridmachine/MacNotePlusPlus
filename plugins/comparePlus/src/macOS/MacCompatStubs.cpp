@@ -35,24 +35,13 @@
 #include "LibHelpers.h"
 
 // ---------------------------------------------------------------------------
-// StaticDialog — base for every dialog below.
-// Defining ~StaticDialog() gives clang a "key function" so the vtable and
-// typeinfo land in this TU instead of being weak-refs everywhere.
+// StaticDialog — the real upstream implementation is compiled directly
+// (see macos/CMakeLists.txt ComparePlus sources). Stubbing dlgProc here
+// was a mistake: it replaces the static dispatcher that stores `this` in
+// GWLP_USERDATA on WM_INITDIALOG and routes every subsequent message to
+// the virtual run_dlgProc — a no-op stub silently breaks every dialog in
+// the plugin.
 // ---------------------------------------------------------------------------
-
-StaticDialog::~StaticDialog() {}
-
-void StaticDialog::create(int, bool, bool) {}
-void StaticDialog::destroy() {}
-void StaticDialog::getMappedChildRect(HWND, RECT&) const {}
-void StaticDialog::getMappedChildRect(int, RECT&) const {}
-void StaticDialog::redrawDlgItem(int, bool) const {}
-void StaticDialog::goToCenter(UINT) {}
-void StaticDialog::display(bool, bool) const {}
-RECT StaticDialog::getViewablePositionRect(RECT testRc) const { return testRc; }
-POINT StaticDialog::getTopPoint(HWND, bool) const { return POINT{0, 0}; }
-intptr_t StaticDialog::dlgProc(HWND, UINT, WPARAM, LPARAM) { return 0; }
-HGLOBAL StaticDialog::makeRTLResource(int, DLGTEMPLATE**) { return nullptr; }
 
 // ---------------------------------------------------------------------------
 // ProgressDlg — functional stub.
