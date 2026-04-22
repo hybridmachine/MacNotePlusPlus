@@ -9,6 +9,11 @@
 // Initialize button control (set up action target).
 void Win32Button_Init(void* hwndVoid);
 
+// Initialize radio-button control. `groupIndex` selects one of the
+// per-group selectors on Win32ButtonTarget; pass < 0 or >= 16 to fall
+// back to buttonClicked: (single-group legacy behavior).
+void Win32Radio_Init(void* hwndVoid, int groupIndex);
+
 // Destroy button control data.
 void Win32Button_Destroy(void* hwndVoid);
 

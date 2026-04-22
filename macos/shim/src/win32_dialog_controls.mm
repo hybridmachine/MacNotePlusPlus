@@ -151,6 +151,46 @@ void Win32Button_Init(void* hwndVoid)
 	}
 }
 
+void Win32Radio_Init(void* hwndVoid, int groupIndex)
+{
+	HWND hwnd = reinterpret_cast<HWND>(hwndVoid);
+	uintptr_t key = reinterpret_cast<uintptr_t>(hwnd);
+
+	auto* info = HandleRegistry::getWindowInfo(hwnd);
+	if (!info || !info->nativeView) return;
+
+	id view = (__bridge id)info->nativeView;
+	if (![view isKindOfClass:[NSButton class]]) return;
+
+	if (!s_buttonTargets)
+		s_buttonTargets = [NSMutableDictionary dictionary];
+
+	Win32ButtonTarget* target = [[Win32ButtonTarget alloc] init];
+	target.buttonHwnd = hwnd;
+
+	NSButton* btn = (NSButton*)view;
+	btn.target = target;
+
+	SEL selector = @selector(buttonClicked:);
+	if (groupIndex >= 0 && groupIndex < 16)
+	{
+		static const SEL kGroupSelectors[16] = {
+			@selector(radioGroup0:),  @selector(radioGroup1:),
+			@selector(radioGroup2:),  @selector(radioGroup3:),
+			@selector(radioGroup4:),  @selector(radioGroup5:),
+			@selector(radioGroup6:),  @selector(radioGroup7:),
+			@selector(radioGroup8:),  @selector(radioGroup9:),
+			@selector(radioGroup10:), @selector(radioGroup11:),
+			@selector(radioGroup12:), @selector(radioGroup13:),
+			@selector(radioGroup14:), @selector(radioGroup15:),
+		};
+		selector = kGroupSelectors[groupIndex];
+	}
+	btn.action = selector;
+
+	s_buttonTargets[@(key)] = target;
+}
+
 void Win32Button_Destroy(void* hwndVoid)
 {
 	uintptr_t key = reinterpret_cast<uintptr_t>(hwndVoid);
