@@ -263,6 +263,56 @@ bool Win32Controls_HandleMessage(void* hwndVoid, ControlType type,
 			return Win32Static_HandleMessage(hwnd, msg, wParam, lParam, result);
 		case ControlType::ComboBox:
 			return Win32ComboBox_HandleMessage(hwnd, msg, wParam, lParam, result);
+		case ControlType::UpDown:
+		{
+			// Minimal NSStepper bridge — enough for the messages ComparePlus
+			// uses. Expand if more spin-control plugins need support.
+			auto* info = HandleRegistry::getWindowInfo(hwnd);
+			if (!info || !info->nativeView) return false;
+			id view = (__bridge id)info->nativeView;
+			if (![view isKindOfClass:[NSStepper class]]) return false;
+			NSStepper* step = (NSStepper*)view;
+			switch (msg)
+			{
+				case UDM_SETRANGE:
+				{
+					// Win32: lParam = MAKELPARAM(max, min)
+					//   LOWORD(lParam) = upper bound, HIWORD(lParam) = lower bound.
+					short hi = static_cast<short>(LOWORD(lParam));
+					short lo = static_cast<short>(HIWORD(lParam));
+					step.minValue = lo;
+					step.maxValue = hi;
+					result = 0;
+					return true;
+				}
+				case UDM_SETRANGE32:
+					step.minValue = static_cast<int>(wParam);
+					step.maxValue = static_cast<int>(lParam);
+					result = 0;
+					return true;
+				case UDM_GETRANGE:
+					result = MAKELONG(static_cast<short>(step.maxValue),
+					                  static_cast<short>(step.minValue));
+					return true;
+				case UDM_SETPOS:
+				{
+					step.integerValue = static_cast<short>(LOWORD(lParam));
+					result = 0;
+					return true;
+				}
+				case UDM_SETPOS32:
+					step.integerValue = static_cast<int>(lParam);
+					result = 0;
+					return true;
+				case UDM_GETPOS:
+					result = MAKELONG(static_cast<short>(step.integerValue), 0);
+					return true;
+				case UDM_GETPOS32:
+					result = static_cast<intptr_t>(step.integerValue);
+					return true;
+			}
+			return false;
+		}
 		default:
 			return false;
 	}

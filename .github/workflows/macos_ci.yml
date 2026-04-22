@@ -68,17 +68,17 @@ jobs:
         working-directory: macos/build
         run: cmake -G Xcode ..
 
-      - name: Build MacOSNotePP (Release)
+      - name: Build MacNotePlusPlus (Release)
         working-directory: macos/build
-        run: cmake --build . --target MacOSNotePP --config Release -- -quiet
+        run: cmake --build . --target MacNotePlusPlus --config Release -- -quiet
 
-      - name: Build MacOSNotePP (Debug)
+      - name: Build MacNotePlusPlus (Debug)
         working-directory: macos/build
-        run: cmake --build . --target MacOSNotePP --config Debug -- -quiet
+        run: cmake --build . --target MacNotePlusPlus --config Debug -- -quiet
 
       - name: Build app bundle (package)
         working-directory: macos/build
-        run: cmake --build . --target MacOSNotePP_package --config Release
+        run: cmake --build . --target MacNotePlusPlus_package --config Release
 
       - name: Verify app bundle
         run: |
@@ -86,10 +86,10 @@ jobs:
           ls -lR macos/dist/MacNote++.app/Contents/ | head -30
           echo ""
           echo "=== Binary info ==="
-          file macos/dist/MacNote++.app/Contents/MacOS/MacOSNotePP
+          file macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus
           echo ""
           echo "=== Linked frameworks ==="
-          otool -L macos/dist/MacNote++.app/Contents/MacOS/MacOSNotePP | head -20
+          otool -L macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus | head -20
 
       - name: Upload app bundle artifact
         uses: actions/upload-artifact@v4
@@ -101,8 +101,8 @@ jobs:
       - name: Upload Release binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MacOSNotePP-Release-${{ matrix.runner }}-${{ matrix.arch }}
-          path: macos/build/Release/MacOSNotePP
+          name: MacNotePlusPlus-Release-${{ matrix.runner }}-${{ matrix.arch }}
+          path: macos/build/Release/MacNotePlusPlus
           retention-days: 14
 
   sign_and_notarize:
@@ -150,7 +150,7 @@ jobs:
 
       - name: Restore executable permission
         if: steps.check_secrets.outputs.skip != 'true'
-        run: chmod +x macos/dist/MacNote++.app/Contents/MacOS/MacOSNotePP
+        run: chmod +x macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus
 
       - name: Import code signing certificate
         if: steps.check_secrets.outputs.skip != 'true'

@@ -18,6 +18,26 @@
 @interface Win32ButtonTarget : NSObject
 @property (assign) HWND buttonHwnd;
 - (void)buttonClicked:(id)sender;
+// Per-group radio selectors. Cocoa's NSButtonTypeRadio auto-grouping
+// keys on (superview, action). Distinct selectors that forward to
+// buttonClicked: let us honor the template's startsGroup flag without
+// losing WM_COMMAND/BN_CLICKED dispatch.
+- (void)radioGroup0:(id)sender;
+- (void)radioGroup1:(id)sender;
+- (void)radioGroup2:(id)sender;
+- (void)radioGroup3:(id)sender;
+- (void)radioGroup4:(id)sender;
+- (void)radioGroup5:(id)sender;
+- (void)radioGroup6:(id)sender;
+- (void)radioGroup7:(id)sender;
+- (void)radioGroup8:(id)sender;
+- (void)radioGroup9:(id)sender;
+- (void)radioGroup10:(id)sender;
+- (void)radioGroup11:(id)sender;
+- (void)radioGroup12:(id)sender;
+- (void)radioGroup13:(id)sender;
+- (void)radioGroup14:(id)sender;
+- (void)radioGroup15:(id)sender;
 @end
 
 @implementation Win32ButtonTarget
@@ -38,6 +58,22 @@
 		}
 	}
 }
+- (void)radioGroup0:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup1:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup2:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup3:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup4:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup5:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup6:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup7:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup8:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup9:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup10:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup11:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup12:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup13:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup14:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup15:(id)sender { [self buttonClicked:sender]; }
 @end
 
 static NSMutableDictionary<NSNumber*, Win32ButtonTarget*>* s_buttonTargets = nil;
@@ -113,6 +149,46 @@ void Win32Button_Init(void* hwndVoid)
 			s_buttonTargets[@(key)] = target;
 		}
 	}
+}
+
+void Win32Radio_Init(void* hwndVoid, int groupIndex)
+{
+	HWND hwnd = reinterpret_cast<HWND>(hwndVoid);
+	uintptr_t key = reinterpret_cast<uintptr_t>(hwnd);
+
+	auto* info = HandleRegistry::getWindowInfo(hwnd);
+	if (!info || !info->nativeView) return;
+
+	id view = (__bridge id)info->nativeView;
+	if (![view isKindOfClass:[NSButton class]]) return;
+
+	if (!s_buttonTargets)
+		s_buttonTargets = [NSMutableDictionary dictionary];
+
+	Win32ButtonTarget* target = [[Win32ButtonTarget alloc] init];
+	target.buttonHwnd = hwnd;
+
+	NSButton* btn = (NSButton*)view;
+	btn.target = target;
+
+	SEL selector = @selector(buttonClicked:);
+	if (groupIndex >= 0 && groupIndex < 16)
+	{
+		static const SEL kGroupSelectors[16] = {
+			@selector(radioGroup0:),  @selector(radioGroup1:),
+			@selector(radioGroup2:),  @selector(radioGroup3:),
+			@selector(radioGroup4:),  @selector(radioGroup5:),
+			@selector(radioGroup6:),  @selector(radioGroup7:),
+			@selector(radioGroup8:),  @selector(radioGroup9:),
+			@selector(radioGroup10:), @selector(radioGroup11:),
+			@selector(radioGroup12:), @selector(radioGroup13:),
+			@selector(radioGroup14:), @selector(radioGroup15:),
+		};
+		selector = kGroupSelectors[groupIndex];
+	}
+	btn.action = selector;
+
+	s_buttonTargets[@(key)] = target;
 }
 
 void Win32Button_Destroy(void* hwndVoid)
@@ -731,6 +807,7 @@ bool Win32ComboBox_HandleMessage(void* hwndVoid, unsigned int msg,
 		case CB_GETEXTENDEDUI:
 		case CB_SHOWDROPDOWN:
 		case CB_GETDROPPEDSTATE:
+		case CB_LIMITTEXT:     // NSComboBox has no hard cap; accept silently
 			result = 0;
 			return true;
 

@@ -478,6 +478,9 @@ add_library(ComparePlus MODULE
     "${COMPARE_PLUS_DIR}/src/Strings.cpp"
     "${COMPARE_PLUS_DIR}/src/UserSettings.cpp"
     "${COMPARE_PLUS_DIR}/src/Engine/Engine.cpp"
+    "${COMPARE_PLUS_DIR}/src/NppAPI/DockingFeature/StaticDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/CompareOptionsDlg/CompareOptionsDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/SettingsDlg/SettingsDialog.cpp"
     "${COMPARE_PLUS_DIR}/src/macOS/MacCompatStubs.cpp"
 )
 target_include_directories(ComparePlus PRIVATE
