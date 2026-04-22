@@ -302,8 +302,20 @@ INT_PTR DialogBoxParamW(HINSTANCE hInstance, LPCWSTR lpTemplateName,
 		if (info && info->nativeView)
 		{
 			void* contentView = info->nativeView;
+			int currentGroup = -1;
 			for (const auto& desc : tmpl->controls)
-				createDialogControl(desc, contentView, dlgHwnd, duX, duY, -1);
+			{
+				int group = -1;
+				if (desc.kind == DlgControlClass::Radio)
+				{
+					// WS_GROUP / startsGroup starts a new run. The first
+					// radio in a dialog always starts a group, even if the
+					// template author forgot to flag it.
+					if (desc.startsGroup || currentGroup < 0) ++currentGroup;
+					group = currentGroup;
+				}
+				createDialogControl(desc, contentView, dlgHwnd, duX, duY, group);
+			}
 		}
 	}
 
