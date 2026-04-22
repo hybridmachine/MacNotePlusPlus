@@ -1,7 +1,7 @@
 // Hand-translated IDD_SETTINGS_DIALOG from Compare.rc.
 //
 // Controls ordered to match the .rc top to bottom; rect units are
-// dialog units (DLU). The six IDC_COMBO_*_COLOR controls are ColorCombo
+// dialog units (DLU). The seven IDC_COMBO_*_COLOR controls are ColorCombo
 // instances in the plugin (custom owner-drawn COMBOBOX that picks a
 // color), rendered here as DlgControlClass::ColorCombo → NSColorWell.
 // The three IDC_*_SPIN controls become NSSteppers via UpDown.

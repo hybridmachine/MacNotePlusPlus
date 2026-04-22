@@ -337,26 +337,37 @@ BOOL UpdateWindow(HWND hWnd)
 BOOL EnableWindow(HWND hWnd, BOOL bEnable)
 {
 	auto* info = HandleRegistry::getWindowInfo(hWnd);
-	if (!info || !info->nativeView)
+	if (!info)
 		return FALSE;
-	NSView* view = (__bridge NSView*)info->nativeView;
-	if (![view isKindOfClass:[NSControl class]])
-		return FALSE;
-	NSControl* ctrl = (NSControl*)view;
-	BOOL wasDisabled = ctrl.enabled ? FALSE : TRUE;
-	ctrl.enabled = (bEnable != FALSE);
+
+	BOOL wasDisabled = info->enabled ? FALSE : TRUE;
+	bool newEnabled = (bEnable != FALSE);
+	info->enabled = newEnabled;
+
+	if (info->nativeView)
+	{
+		NSView* view = (__bridge NSView*)info->nativeView;
+		if ([view isKindOfClass:[NSControl class]])
+			((NSControl*)view).enabled = newEnabled;
+	}
+	if (info->nativeWindow)
+	{
+		// Top-level windows have no native "enabled" state; the closest
+		// Cocoa analogue is blocking input. ComparePlus disables the main
+		// Notepad++ window while its progress dialog runs, expecting the
+		// user to be locked out. ignoresMouseEvents handles that path.
+		NSWindow* window = (__bridge NSWindow*)info->nativeWindow;
+		window.ignoresMouseEvents = !newEnabled;
+	}
 	return wasDisabled;
 }
 
 BOOL IsWindowEnabled(HWND hWnd)
 {
 	auto* info = HandleRegistry::getWindowInfo(hWnd);
-	if (!info || !info->nativeView)
-		return TRUE;
-	NSView* view = (__bridge NSView*)info->nativeView;
-	if (![view isKindOfClass:[NSControl class]])
-		return TRUE;
-	return ((NSControl*)view).enabled ? TRUE : FALSE;
+	if (!info)
+		return FALSE;
+	return info->enabled ? TRUE : FALSE;
 }
 
 BOOL IsWindowVisible(HWND hWnd)
@@ -673,9 +684,30 @@ BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy,
 			}
 			else
 			{
-				NSRect screenFrame = [[NSScreen mainScreen] frame];
+				// Win32 passes screen coords with top-left origin. Cocoa
+				// screen coords use bottom-left. Pick the screen we're
+				// actually positioning against: prefer the one containing
+				// the target point, fall back to the window's current
+				// screen, then the primary. Using [NSScreen mainScreen]
+				// unconditionally breaks multi-monitor layouts because
+				// mainScreen is the key-window screen, not necessarily the
+				// one we're moving to.
+				NSPoint targetPt = NSMakePoint(X, Y);
+				NSScreen* targetScreen = nil;
+				for (NSScreen* s in [NSScreen screens])
+				{
+					if (NSPointInRect(targetPt, [s frame]))
+					{
+						targetScreen = s;
+						break;
+					}
+				}
+				if (!targetScreen) targetScreen = [window screen];
+				if (!targetScreen) targetScreen = [NSScreen mainScreen];
+
+				NSRect screenFrame = [targetScreen frame];
 				newX = X;
-				newY = screenFrame.size.height - Y - newH;
+				newY = NSMaxY(screenFrame) - Y - newH;
 			}
 
 			[window setFrame:NSMakeRect(newX, newY, newW, newH) display:YES];
