@@ -334,8 +334,30 @@ BOOL UpdateWindow(HWND hWnd)
 	return TRUE;
 }
 
-BOOL EnableWindow(HWND hWnd, BOOL bEnable) { return TRUE; }
-BOOL IsWindowEnabled(HWND hWnd) { return TRUE; }
+BOOL EnableWindow(HWND hWnd, BOOL bEnable)
+{
+	auto* info = HandleRegistry::getWindowInfo(hWnd);
+	if (!info || !info->nativeView)
+		return FALSE;
+	NSView* view = (__bridge NSView*)info->nativeView;
+	if (![view isKindOfClass:[NSControl class]])
+		return FALSE;
+	NSControl* ctrl = (NSControl*)view;
+	BOOL wasDisabled = ctrl.enabled ? FALSE : TRUE;
+	ctrl.enabled = (bEnable != FALSE);
+	return wasDisabled;
+}
+
+BOOL IsWindowEnabled(HWND hWnd)
+{
+	auto* info = HandleRegistry::getWindowInfo(hWnd);
+	if (!info || !info->nativeView)
+		return TRUE;
+	NSView* view = (__bridge NSView*)info->nativeView;
+	if (![view isKindOfClass:[NSControl class]])
+		return TRUE;
+	return ((NSControl*)view).enabled ? TRUE : FALSE;
+}
 
 BOOL IsWindowVisible(HWND hWnd)
 {

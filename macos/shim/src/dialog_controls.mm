@@ -36,7 +36,8 @@ HWND registerDialogChild(NSView* view, const DlgControlDescriptor& desc,
                          const wchar_t* className)
 {
 	HandleRegistry::WindowInfo info{};
-	info.nativeView    = (__bridge_retained void*)view;
+	// HandleRegistry::createWindow() CFRetains nativeView; use __bridge to avoid double-retain.
+	info.nativeView    = (__bridge void*)view;
 	info.parent        = ownerDialog;
 	info.controlId     = desc.id;
 	info.controlType   = controlType;
@@ -144,13 +145,15 @@ HWND createDialogControl(const DlgControlDescriptor& desc,
 		}
 		case DlgControlClass::ColorCombo:
 		{
-			// ColorCombo is a Win32 owner-draw combo; on macOS we render
-			// an NSColorWell read-only preview of whatever setColor()
-			// applied. Bidirectional color editing lands in a follow-up
-			// (requires bridging NSColorWell.color <-> ColorCombo::_color,
-			// which couples the shim to a plugin type). Disabling user
-			// interaction prevents the "picked a color that didn't save"
-			// confusion.
+			// ColorCombo is a Win32 owner-draw combo. On macOS this is
+			// currently a disabled NSColorWell placeholder — it does not
+			// mirror ColorCombo::setColor() yet, because ColorCombo::init
+			// is stubbed on macOS (MacCompatStubs.cpp) so the plugin's
+			// saved colors never reach the well. The one-way bridge and
+			// NSColorWell -> ColorCombo::_color pickling land together in
+			// a follow-up that un-stubs ColorCombo. Disabling the well
+			// prevents the "picked a color that didn't save" confusion
+			// until then.
 			NSColorWell* well = [[NSColorWell alloc] initWithFrame:frame];
 			well.enabled = NO;
 			[parent addSubview:well];
