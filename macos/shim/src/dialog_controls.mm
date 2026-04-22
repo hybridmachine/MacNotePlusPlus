@@ -52,7 +52,8 @@ HWND createDialogControl(const DlgControlDescriptor& desc,
                          void* parentViewRaw,
                          HWND ownerDialog,
                          double duX,
-                         double duY)
+                         double duY,
+                         int radioGroupIndex)
 {
 	NSView* parent = (__bridge NSView*)parentViewRaw;
 	NSRect frame   = dluToPixel(desc.x, desc.y, desc.cx, desc.cy, parent, duX, duY);
@@ -89,7 +90,7 @@ HWND createDialogControl(const DlgControlDescriptor& desc,
 			b.title      = text;
 			[parent addSubview:b];
 			HWND h = registerDialogChild(b, desc, ownerDialog, ControlType::Button, L"Button");
-			Win32Button_Init(h);
+			Win32Radio_Init(h, radioGroupIndex);
 			return h;
 		}
 		case DlgControlClass::GroupBox:

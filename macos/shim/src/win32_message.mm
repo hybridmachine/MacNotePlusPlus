@@ -303,7 +303,7 @@ INT_PTR DialogBoxParamW(HINSTANCE hInstance, LPCWSTR lpTemplateName,
 		{
 			void* contentView = info->nativeView;
 			for (const auto& desc : tmpl->controls)
-				createDialogControl(desc, contentView, dlgHwnd, duX, duY);
+				createDialogControl(desc, contentView, dlgHwnd, duX, duY, -1);
 		}
 	}
 
