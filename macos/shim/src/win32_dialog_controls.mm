@@ -18,6 +18,26 @@
 @interface Win32ButtonTarget : NSObject
 @property (assign) HWND buttonHwnd;
 - (void)buttonClicked:(id)sender;
+// Per-group radio selectors. Cocoa's NSButtonTypeRadio auto-grouping
+// keys on (superview, action). Distinct selectors that forward to
+// buttonClicked: let us honor the template's startsGroup flag without
+// losing WM_COMMAND/BN_CLICKED dispatch.
+- (void)radioGroup0:(id)sender;
+- (void)radioGroup1:(id)sender;
+- (void)radioGroup2:(id)sender;
+- (void)radioGroup3:(id)sender;
+- (void)radioGroup4:(id)sender;
+- (void)radioGroup5:(id)sender;
+- (void)radioGroup6:(id)sender;
+- (void)radioGroup7:(id)sender;
+- (void)radioGroup8:(id)sender;
+- (void)radioGroup9:(id)sender;
+- (void)radioGroup10:(id)sender;
+- (void)radioGroup11:(id)sender;
+- (void)radioGroup12:(id)sender;
+- (void)radioGroup13:(id)sender;
+- (void)radioGroup14:(id)sender;
+- (void)radioGroup15:(id)sender;
 @end
 
 @implementation Win32ButtonTarget
@@ -38,6 +58,22 @@
 		}
 	}
 }
+- (void)radioGroup0:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup1:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup2:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup3:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup4:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup5:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup6:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup7:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup8:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup9:(id)sender  { [self buttonClicked:sender]; }
+- (void)radioGroup10:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup11:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup12:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup13:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup14:(id)sender { [self buttonClicked:sender]; }
+- (void)radioGroup15:(id)sender { [self buttonClicked:sender]; }
 @end
 
 static NSMutableDictionary<NSNumber*, Win32ButtonTarget*>* s_buttonTargets = nil;
