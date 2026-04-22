@@ -731,6 +731,7 @@ bool Win32ComboBox_HandleMessage(void* hwndVoid, unsigned int msg,
 		case CB_GETEXTENDEDUI:
 		case CB_SHOWDROPDOWN:
 		case CB_GETDROPPEDSTATE:
+		case CB_LIMITTEXT:     // NSComboBox has no hard cap; accept silently
 			result = 0;
 			return true;
 

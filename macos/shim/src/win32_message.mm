@@ -8,6 +8,8 @@
 #include "handle_registry.h"
 #include "win32_controls_impl.h"
 #include "scintilla_bridge.h"
+#include "dialog_template.h"
+#include "dialog_controls.h"
 
 #include <unordered_map>
 #include <string>
@@ -126,7 +128,8 @@ static std::unordered_map<uintptr_t, bool> s_dialogEnded;
 // Helper: Create a dialog window (NSPanel) with the given properties
 static HWND createDialogWindow(HWND hWndParent, DLGPROC dlgProc, LPARAM initParam,
                                 HINSTANCE hInstance, int width, int height,
-                                const wchar_t* title, bool isModal)
+                                const wchar_t* title, bool isModal,
+                                bool sendInitDialog = true)
 {
 	if (width <= 0) width = 400;
 	if (height <= 0) height = 300;
@@ -181,8 +184,9 @@ static HWND createDialogWindow(HWND hWndParent, DLGPROC dlgProc, LPARAM initPara
 
 	HWND dlgHwnd = HandleRegistry::createWindow(info);
 
-	// Send WM_INITDIALOG
-	if (dlgProc)
+	// Send WM_INITDIALOG (callers that need to populate child controls
+	// first pass sendInitDialog=false and dispatch it themselves).
+	if (sendInitDialog && dlgProc)
 		dlgProc(dlgHwnd, WM_INITDIALOG, 0, initParam);
 
 	return dlgHwnd;
@@ -261,9 +265,51 @@ HWND CreateDialogIndirectParamW(HINSTANCE hInstance, const void* lpTemplate,
 INT_PTR DialogBoxParamW(HINSTANCE hInstance, LPCWSTR lpTemplateName,
                         HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
 {
+	// lpTemplateName is MAKEINTRESOURCEW(id) when upper bits are zero.
+	// Look up a hand-translated template; if one exists, render it as
+	// Cocoa controls before dispatching WM_INITDIALOG.
+	uintptr_t raw = reinterpret_cast<uintptr_t>(lpTemplateName);
+	const DialogTemplateCpp* tmpl = nullptr;
+	if ((raw >> 16) == 0)
+		tmpl = findDialogTemplate(static_cast<int>(raw & 0xFFFF));
+
+	int width   = 400;
+	int height  = 300;
+	const wchar_t* title = L"Dialog";
+
+	// Windows dialog-unit to pixel scale (empirical, MS Shell Dlg 9pt):
+	// horizontal ≈ 1.6 px/DLU, vertical ≈ 1.9 px/DLU.
+	constexpr double duX = 1.6;
+	constexpr double duY = 1.9;
+
+	if (tmpl)
+	{
+		width  = static_cast<int>(tmpl->cx * duX);
+		height = static_cast<int>(tmpl->cy * duY);
+		title  = tmpl->title.c_str();
+	}
+
 	HWND dlgHwnd = createDialogWindow(hWndParent, lpDialogFunc, dwInitParam,
-	                                   hInstance, 400, 300, L"Dialog", true);
+	                                   hInstance, width, height, title, true,
+	                                   /*sendInitDialog*/ false);
 	if (!dlgHwnd) return -1;
+
+	// Populate controls from the template before WM_INITDIALOG fires,
+	// so the dialog proc's GetDlgItem / SendDlgItemMessage calls work.
+	if (tmpl)
+	{
+		auto* info = HandleRegistry::getWindowInfo(dlgHwnd);
+		if (info && info->nativeView)
+		{
+			void* contentView = info->nativeView;
+			for (const auto& desc : tmpl->controls)
+				createDialogControl(desc, contentView, dlgHwnd, duX, duY);
+		}
+	}
+
+	// Now that child controls exist, fire WM_INITDIALOG.
+	if (lpDialogFunc)
+		lpDialogFunc(dlgHwnd, WM_INITDIALOG, 0, dwInitParam);
 
 	auto* info = HandleRegistry::getWindowInfo(dlgHwnd);
 	if (!info || !info->nativeWindow)
