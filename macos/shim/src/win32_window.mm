@@ -633,7 +633,32 @@ BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy,
 
 	if (!(uFlags & SWP_NOSIZE) || !(uFlags & SWP_NOMOVE))
 	{
-		if (info->nativeView)
+		// Top-level windows (NSWindow-backed): move/resize the window itself
+		// in screen coordinates. Win32 passes screen coords for X/Y on
+		// top-level windows, so convert top-left-origin → bottom-left-origin.
+		if (info->nativeWindow)
+		{
+			NSWindow* window = (__bridge NSWindow*)info->nativeWindow;
+			NSRect currentFrame = [window frame];
+
+			CGFloat newW = (uFlags & SWP_NOSIZE) ? currentFrame.size.width  : cx;
+			CGFloat newH = (uFlags & SWP_NOSIZE) ? currentFrame.size.height : cy;
+			CGFloat newX, newY;
+			if (uFlags & SWP_NOMOVE)
+			{
+				newX = currentFrame.origin.x;
+				newY = currentFrame.origin.y;
+			}
+			else
+			{
+				NSRect screenFrame = [[NSScreen mainScreen] frame];
+				newX = X;
+				newY = screenFrame.size.height - Y - newH;
+			}
+
+			[window setFrame:NSMakeRect(newX, newY, newW, newH) display:YES];
+		}
+		else if (info->nativeView)
 		{
 			NSView* view = (__bridge NSView*)info->nativeView;
 			NSRect currentFrame = [view frame];
