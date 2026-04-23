@@ -4,6 +4,8 @@
 #import <Cocoa/Cocoa.h>
 #include "plugin_manager.h"
 #include "handle_registry.h"
+#include "win32_menu_impl.h"
+#include "winuser.h"
 
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
@@ -62,6 +64,71 @@ static std::wstring utf8ToWide(const char* utf8)
 	if (!data || data.length < sizeof(wchar_t)) return L"";
 	return std::wstring(reinterpret_cast<const wchar_t*>(data.bytes),
 	                    data.length / sizeof(wchar_t));
+}
+
+// Translate a Win32 VK code / ASCII keycode from FuncItem::_pShKey to the
+// NSString keyEquivalent AppKit wants. Returns nil if the key can't be mapped.
+// Printable ASCII (letters, digits, most punctuation) is used as-is, lowered.
+// VK_PRIOR/VK_NEXT/VK_HOME/VK_END/VK_INSERT/VK_DELETE and VK_F1..VK_F24 map
+// to their AppKit function-key unichars.
+static NSString* nsKeyEquivalentForPluginKey(UCHAR key)
+{
+	if (key == 0) return nil;
+
+	// Printable ASCII — letters and digits
+	if ((key >= '0' && key <= '9') ||
+	    (key >= 'A' && key <= 'Z'))
+	{
+		unichar c = static_cast<unichar>(tolower(key));
+		return [NSString stringWithCharacters:&c length:1];
+	}
+
+	// F1..F24 (Windows VK_F1 = 0x70, contiguous)
+	if (key >= VK_F1 && key <= VK_F1 + 23)
+	{
+		unichar fn = static_cast<unichar>(NSF1FunctionKey + (key - VK_F1));
+		return [NSString stringWithCharacters:&fn length:1];
+	}
+
+	unichar fn = 0;
+	switch (key)
+	{
+		case VK_PRIOR:  fn = NSPageUpFunctionKey;   break;
+		case VK_NEXT:   fn = NSPageDownFunctionKey; break;
+		case VK_HOME:   fn = NSHomeFunctionKey;     break;
+		case VK_END:    fn = NSEndFunctionKey;      break;
+		case VK_INSERT: fn = NSInsertFunctionKey;   break;
+		case VK_DELETE: fn = NSDeleteFunctionKey;   break;
+		case VK_LEFT:   fn = NSLeftArrowFunctionKey;  break;
+		case VK_RIGHT:  fn = NSRightArrowFunctionKey; break;
+		case VK_UP:     fn = NSUpArrowFunctionKey;    break;
+		case VK_DOWN:   fn = NSDownArrowFunctionKey;  break;
+		case VK_RETURN: return @"\r";
+		case VK_ESCAPE: return [NSString stringWithFormat:@"%C", (unichar)27];
+		case VK_TAB:    return @"\t";
+		case VK_SPACE:  return @" ";
+		case VK_BACK:   return [NSString stringWithFormat:@"%C", (unichar)NSBackspaceCharacter];
+		default: return nil;
+	}
+	return [NSString stringWithCharacters:&fn length:1];
+}
+
+// Apply a plugin-declared ShortcutKey to its NSMenuItem. Follows the
+// Ctrl->Cmd convention the rest of the shim already uses (see
+// win32_menu_impl.mm:setKeyEquivalentFromText) so plugin hotkeys feel
+// consistent with built-in ones.
+static void applyPluginShortcut(NSMenuItem* item, const ShortcutKey& sk)
+{
+	NSString* key = nsKeyEquivalentForPluginKey(sk._key);
+	if (!key) return;
+
+	NSUInteger mods = 0;
+	if (sk._isCtrl)  mods |= NSEventModifierFlagCommand;
+	if (sk._isAlt)   mods |= NSEventModifierFlagOption;
+	if (sk._isShift) mods |= NSEventModifierFlagShift;
+
+	item.keyEquivalent = key;
+	item.keyEquivalentModifierMask = mods;
 }
 
 // Validate that a Mach-O binary matches the current architecture
@@ -331,6 +398,14 @@ HMENU MacPluginManager::initMenu(HMENU hPluginsMenu)
 				if (fi._init2Check)
 					flags |= MF_CHECKED;
 				::AppendMenuW(pluginSub, flags, static_cast<UINT_PTR>(fi._cmdID), fi._itemName);
+
+				if (fi._pShKey)
+				{
+					NSMenu* subMenu = (__bridge NSMenu*)Win32Menu_GetNSMenu(pluginSub);
+					NSInteger count = subMenu ? [subMenu numberOfItems] : 0;
+					if (count > 0)
+						applyPluginShortcut([subMenu itemAtIndex:count - 1], *fi._pShKey);
+				}
 			}
 		}
 

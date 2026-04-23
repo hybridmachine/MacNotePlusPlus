@@ -235,6 +235,12 @@ static NSMenu* resolveMenu(HMENU h)
 	return s_menuMap[@(reinterpret_cast<uintptr_t>(h))];
 }
 
+// Host-facing accessor — see win32_menu_impl.h.
+void* Win32Menu_GetNSMenu(HMENU h)
+{
+	return (__bridge void*)resolveMenu(h);
+}
+
 static HMENU findHmenuForNSMenu(NSMenu* menu)
 {
 	ensureMenuMaps();
