@@ -480,7 +480,9 @@ add_library(ComparePlus MODULE
     "${COMPARE_PLUS_DIR}/src/Engine/Engine.cpp"
     "${COMPARE_PLUS_DIR}/src/NppAPI/DockingFeature/StaticDialog.cpp"
     "${COMPARE_PLUS_DIR}/src/CompareOptionsDlg/CompareOptionsDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/VisualFiltersDlg/VisualFiltersDialog.cpp"
     "${COMPARE_PLUS_DIR}/src/SettingsDlg/SettingsDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/macOS/ColorComboMac.mm"
     "${COMPARE_PLUS_DIR}/src/macOS/MacCompatStubs.cpp"
 )
 target_include_directories(ComparePlus PRIVATE
@@ -512,6 +514,10 @@ set_target_properties(ComparePlus PROPERTIES
 )
 target_compile_options(ComparePlus PRIVATE -Wno-deprecated-declarations)
 target_link_options(ComparePlus PRIVATE -undefined dynamic_lookup)
+target_link_libraries(ComparePlus PRIVATE
+    "-framework AppKit"
+    "-framework Foundation"
+)
 
 add_custom_target(install_compare_plus
     DEPENDS ComparePlus

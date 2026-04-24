@@ -139,29 +139,22 @@ void NavDialog::NavView::reset() {}
 int  NavDialog::NavView::docToBmpLine(intptr_t) const { return 0; }
 
 // ---------------------------------------------------------------------------
-// AboutDialog / CompareOptionsDialog / VisualFiltersDialog / SettingsDialog
-// Each lives only inside a menu-handler function, so the body of doDialog()
-// never runs until a user clicks the corresponding menu item. Returning 0
-// is interpreted upstream as "dialog closed without action".
+// AboutDialog lives only inside a menu-handler function, so the body of
+// doDialog() never runs until a user clicks the corresponding menu item.
+// Returning 0 is interpreted upstream as "dialog closed without action".
 // ---------------------------------------------------------------------------
 
 UINT     AboutDialog::doDialog()                            { return 0; }
 intptr_t AboutDialog::run_dlgProc(UINT, WPARAM, LPARAM)     { return 0; }
 
-UINT     VisualFiltersDialog::doDialog(UserSettings*)       { return 0; }
-intptr_t VisualFiltersDialog::run_dlgProc(UINT, WPARAM, LPARAM)  { return 0; }
-
 // ---------------------------------------------------------------------------
-// URLCtrl / ColorCombo — members of AboutDialog and SettingsDialog
-// respectively. Anchor their vtables with one out-of-line virtual each.
+// URLCtrl — member of AboutDialog. Anchor its vtable with out-of-line no-ops.
+// ColorCombo has a macOS implementation in ColorComboMac.mm.
 // ---------------------------------------------------------------------------
 
 void URLCtrl::create(HWND, const wchar_t*, COLORREF) {}
 void URLCtrl::create(HWND, int, HWND)                {}
 void URLCtrl::destroy()                              {}
-
-void ColorCombo::init(HINSTANCE, HWND, HWND) {}
-void ColorCombo::drawColor() {}
 
 // ---------------------------------------------------------------------------
 // LibHelpers — git/svn integration. Compare.cpp references these from menu
