@@ -548,14 +548,20 @@ configure_file(
     @ONLY
 )
 
+set(NPP_MACOS_APP_PLUGINS "${NPP_MACOS_APP_CONTENTS}/PlugIns")
+
 add_custom_target(MacNotePlusPlus_package
-    DEPENDS MacNotePlusPlus
+    DEPENDS MacNotePlusPlus ComparePlus
     COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_APP_BUNDLE}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_MACOS}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_RESOURCES}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/ComparePlus"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:MacNotePlusPlus>"
         "${NPP_MACOS_APP_MACOS}/MacNotePlusPlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:ComparePlus>"
+        "${NPP_MACOS_APP_PLUGINS}/ComparePlus/ComparePlus.dylib"
     COMMAND ditto --norsrc
         "${NPP_ROOT}/logo.png"
         "${NPP_MACOS_APP_MACOS}/logo.png"

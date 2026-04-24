@@ -1,5 +1,6 @@
 // plugin_manager.mm — macOS plugin loading and management
-// Loads .dylib plugins from ~/Library/Application Support/MacNote++/plugins/
+// Loads .dylib plugins from the app bundle's Contents/PlugIns/ (bundled defaults)
+// and ~/Library/Application Support/MacNote++/plugins/ (user-installed).
 
 #import <Cocoa/Cocoa.h>
 #include "plugin_manager.h"
@@ -353,33 +354,53 @@ int MacPluginManager::loadPluginFromPath(const std::wstring& pluginFilePath)
 bool MacPluginManager::loadPlugins()
 {
 	@autoreleasepool {
-		NSString* pluginDir = [@"~/Library/Application Support/MacNote++/plugins"
-			stringByExpandingTildeInPath];
-
 		NSFileManager* fm = [NSFileManager defaultManager];
 
-		// Create directory if it doesn't exist
-		[fm createDirectoryAtPath:pluginDir withIntermediateDirectories:YES attributes:nil error:nil];
+		// Scan the user plugins directory first, then the bundled PlugIns
+		// directory. A user-installed plugin with the same folder name as a
+		// bundled one wins (lets users override a shipped default).
+		NSString* userDir = [@"~/Library/Application Support/MacNote++/plugins"
+			stringByExpandingTildeInPath];
+		[fm createDirectoryAtPath:userDir withIntermediateDirectories:YES attributes:nil error:nil];
 
-		NSArray<NSString*>* contents = [fm contentsOfDirectoryAtPath:pluginDir error:nil];
-		if (!contents)
-			return false;
+		NSMutableArray<NSString*>* pluginDirs = [NSMutableArray arrayWithCapacity:2];
+		[pluginDirs addObject:userDir];
 
-		for (NSString* item in contents)
+		NSString* bundledDir = [[NSBundle mainBundle] builtInPlugInsPath];
+		if (bundledDir && [fm fileExistsAtPath:bundledDir])
+			[pluginDirs addObject:bundledDir];
+
+		NSMutableSet<NSString*>* seen = [NSMutableSet set];
+
+		for (NSString* pluginDir in pluginDirs)
 		{
-			NSString* itemPath = [pluginDir stringByAppendingPathComponent:item];
-			BOOL isDir = NO;
-			if ([fm fileExistsAtPath:itemPath isDirectory:&isDir] && isDir)
+			NSArray<NSString*>* contents = [fm contentsOfDirectoryAtPath:pluginDir error:nil];
+			if (!contents)
+				continue;
+
+			for (NSString* item in contents)
 			{
+				NSString* itemPath = [pluginDir stringByAppendingPathComponent:item];
+				BOOL isDir = NO;
+				if (!([fm fileExistsAtPath:itemPath isDirectory:&isDir] && isDir))
+					continue;
+
 				// Look for <Name>/<Name>.dylib
 				NSString* dylibName = [item stringByAppendingPathExtension:@"dylib"];
 				NSString* dylibPath = [itemPath stringByAppendingPathComponent:dylibName];
 
-				if ([fm fileExistsAtPath:dylibPath])
-				{
-					std::wstring wPath = utf8ToWide([dylibPath UTF8String]);
-					loadPluginFromPath(wPath);
-				}
+				if (![fm fileExistsAtPath:dylibPath])
+					continue;
+
+				// A user-installed plugin with the same folder name as a bundled
+				// one takes precedence (lets users override ships).
+				NSString* key = [item lowercaseString];
+				if ([seen containsObject:key])
+					continue;
+				[seen addObject:key];
+
+				std::wstring wPath = utf8ToWide([dylibPath UTF8String]);
+				loadPluginFromPath(wPath);
 			}
 		}
 	}

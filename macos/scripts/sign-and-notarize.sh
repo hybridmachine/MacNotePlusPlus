@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 #
-# sign-and-notarize.sh -- Sign and notarize MacNote++.app and its DMG
+# sign-and-notarize.sh -- Sign and notarize MacNote++.app and produce a signed DMG
+#
+# This script performs inside-out signing: every nested Mach-O (plugin dylibs,
+# frameworks) is signed before the outer bundle, then a fresh DMG is built from
+# the signed .app and signed itself. The DMG is submitted to Apple for
+# notarization and the ticket is stapled to both the DMG and the .app.
 #
 # Usage:
 #   ./sign-and-notarize.sh [options]
@@ -14,10 +19,11 @@
 #
 # Options:
 #   --app-path PATH      Path to .app bundle (default: macos/dist/MacNote++.app)
-#   --dmg-path PATH      Path to .dmg file (auto-detected from dist/)
+#   --dmg-output PATH    Output path for signed DMG (default: macos/dist/MacNotePlusPlus.dmg)
+#   --volname NAME       DMG volume name (default: MacNotePlusPlus)
 #   --entitlements PATH  Path to entitlements (default: macos/platform/MacNote.entitlements)
-#   --skip-notarize      Only sign, do not notarize
-#   --skip-dmg           Only sign/notarize the app, not the DMG
+#   --skip-notarize      Only sign, do not submit for notarization
+#   --skip-dmg           Only sign/notarize the .app (no DMG produced)
 #   --verbose            Enable verbose output
 #   --help               Show this help
 
@@ -29,34 +35,33 @@ MACOS_DIR="$REPO_ROOT/macos"
 
 # Defaults
 APP_PATH="${MACOS_DIR}/dist/MacNote++.app"
-DMG_PATH=""
+DMG_OUTPUT="${MACOS_DIR}/dist/MacNotePlusPlus.dmg"
+DMG_VOLNAME="MacNotePlusPlus"
 ENTITLEMENTS="${MACOS_DIR}/platform/MacNote.entitlements"
 SKIP_NOTARIZE=false
 SKIP_DMG=false
 VERBOSE=false
 
-# Helper: require a value argument for an option
 require_arg() {
 	if [[ $# -lt 2 || "$2" == --* ]]; then
 		echo "ERROR: $1 requires a value" >&2; exit 1
 	fi
 }
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--app-path)      require_arg "$1" "${2:-}"; APP_PATH="$2"; shift 2 ;;
-		--dmg-path)      require_arg "$1" "${2:-}"; DMG_PATH="$2"; shift 2 ;;
+		--dmg-output)    require_arg "$1" "${2:-}"; DMG_OUTPUT="$2"; shift 2 ;;
+		--volname)       require_arg "$1" "${2:-}"; DMG_VOLNAME="$2"; shift 2 ;;
 		--entitlements)  require_arg "$1" "${2:-}"; ENTITLEMENTS="$2"; shift 2 ;;
 		--skip-notarize) SKIP_NOTARIZE=true; shift ;;
 		--skip-dmg)      SKIP_DMG=true; shift ;;
 		--verbose)       VERBOSE=true; shift ;;
-		--help)          head -24 "$0" | tail -22; exit 0 ;;
+		--help)          sed -n '2,28p' "$0"; exit 0 ;;
 		*)               echo "Unknown option: $1" >&2; exit 1 ;;
 	esac
 done
 
-# Logging
 log()     { echo "==> $*"; }
 warn()    { echo "WARNING: $*" >&2; }
 die()     { echo "ERROR: $*" >&2; exit 1; }
@@ -69,44 +74,24 @@ verbose() { $VERBOSE && echo "    $*" || true; }
 [[ -f "$ENTITLEMENTS" ]] || die "Entitlements not found: $ENTITLEMENTS"
 
 AUTH_MODE=""
+NOTARY_AUTH_FLAGS=()
 if ! $SKIP_NOTARIZE; then
 	if [[ -n "${APPLE_API_KEY:-}" ]]; then
 		[[ -n "${APPLE_API_ISSUER:-}" ]] || die "APPLE_API_ISSUER required with APPLE_API_KEY"
 		AUTH_MODE="apikey"
+		key_path="${APPLE_API_KEY_PATH:-$HOME/.private_keys/AuthKey_${APPLE_API_KEY}.p8}"
+		NOTARY_AUTH_FLAGS=(--key "$key_path" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
 	elif [[ -n "${APPLE_ID:-}" ]]; then
-		[[ -n "${APPLE_TEAM_ID:-}" ]]    || die "APPLE_TEAM_ID required with APPLE_ID"
+		[[ -n "${APPLE_TEAM_ID:-}" ]]      || die "APPLE_TEAM_ID required with APPLE_ID"
 		[[ -n "${APPLE_APP_PASSWORD:-}" ]] || die "APPLE_APP_PASSWORD required with APPLE_ID"
 		AUTH_MODE="password"
+		NOTARY_AUTH_FLAGS=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
 	else
 		die "Set APPLE_API_KEY+APPLE_API_ISSUER or APPLE_ID+APPLE_TEAM_ID+APPLE_APP_PASSWORD for notarization"
 	fi
 fi
 
-# Auto-detect DMG path
-if [[ -z "$DMG_PATH" ]] && ! $SKIP_DMG; then
-	if [[ -f "${MACOS_DIR}/dist/MacNotePlusPlus.dmg" ]]; then
-		DMG_PATH="${MACOS_DIR}/dist/MacNotePlusPlus.dmg"
-	elif [[ -f "${MACOS_DIR}/dist/MacNotePlusPlus-unsigned.dmg" ]]; then
-		DMG_PATH="${MACOS_DIR}/dist/MacNotePlusPlus-unsigned.dmg"
-	else
-		warn "No DMG found in dist/. Use --dmg-path or --skip-dmg."
-		SKIP_DMG=true
-	fi
-fi
-
-# --- Build notarytool auth flags as array (avoids word-splitting issues) ---
-
-NOTARY_AUTH_FLAGS=()
-if ! $SKIP_NOTARIZE; then
-	if [[ "$AUTH_MODE" == "apikey" ]]; then
-		key_path="${APPLE_API_KEY_PATH:-$HOME/.private_keys/AuthKey_${APPLE_API_KEY}.p8}"
-		NOTARY_AUTH_FLAGS=(--key "$key_path" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
-	else
-		NOTARY_AUTH_FLAGS=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
-	fi
-fi
-
-# --- Step 1: Sign the .app bundle --------------------------------------
+# --- Step 1: Sign the .app bundle (inside-out) -------------------------
 
 log "Signing app bundle: $APP_PATH"
 verbose "Identity: $CODESIGN_IDENTITY"
@@ -115,8 +100,29 @@ verbose "Entitlements: $ENTITLEMENTS"
 # Strip extended attributes (resource forks, Finder info) that block codesign
 xattr -cr "$APP_PATH"
 
-# NOTE: --deep is acceptable while the bundle has no nested frameworks/helpers.
-# Replace with explicit per-component signing if nested bundles are added.
+# Sign every nested Mach-O first (plugin dylibs, helpers, frameworks) with the
+# hardened runtime and a secure timestamp. Apple notarization rejects bundles
+# whose nested binaries lack either. We sign the nested items before the outer
+# bundle so the outer seal covers valid signatures.
+NESTED_BINARIES=()
+while IFS= read -r -d '' f; do
+	NESTED_BINARIES+=("$f")
+done < <(find "$APP_PATH/Contents" \
+	\( -path "$APP_PATH/Contents/MacOS/*" -prune \) -o \
+	\( -name "*.dylib" -o -name "*.framework" -o -name "*.bundle" \) -print0)
+
+for nested in "${NESTED_BINARIES[@]}"; do
+	log "Signing nested: ${nested#$APP_PATH/}"
+	codesign --force --options runtime \
+		--sign "$CODESIGN_IDENTITY" \
+		--timestamp \
+		"$nested"
+done
+
+# --deep re-signs every Mach-O the bundle contains, which is defensive — the
+# explicit nested pass above already covered the plugins, so this is mostly a
+# belt-and-suspenders pass that also seals non-Mach-O resources (e.g. images
+# dropped in Contents/MacOS/) that plain codesign would otherwise reject.
 codesign --force --options runtime \
 	--sign "$CODESIGN_IDENTITY" \
 	--entitlements "$ENTITLEMENTS" \
@@ -127,19 +133,42 @@ codesign --force --options runtime \
 log "Verifying app signature..."
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
-log "Checking Gatekeeper acceptance..."
-if spctl --assess --type execute --verbose=2 "$APP_PATH" 2>&1; then
-	log "App passes Gatekeeper assessment"
-else
+log "Checking Gatekeeper acceptance (pre-notarization)..."
+spctl --assess --type execute --verbose=2 "$APP_PATH" 2>&1 || \
 	warn "App does not yet pass Gatekeeper (expected before notarization)"
-fi
 
-# --- Step 2: Sign the DMG ----------------------------------------------
+# --- Step 2: Build a fresh DMG from the signed .app --------------------
 
+DMG_PATH=""
 if ! $SKIP_DMG; then
-	log "Signing DMG: $DMG_PATH"
-	codesign --force --sign "$CODESIGN_IDENTITY" --timestamp "$DMG_PATH"
-	codesign --verify --verbose=2 "$DMG_PATH"
+	STAGE_ROOT="$(mktemp -d -t macnotepp-sign)"
+	STAGE_DMG_ROOT="$STAGE_ROOT/dmg-root"
+	trap 'rm -rf "$STAGE_ROOT"' EXIT
+
+	mkdir -p "$STAGE_DMG_ROOT"
+	log "Staging signed .app in $STAGE_DMG_ROOT"
+	ditto "$APP_PATH" "$STAGE_DMG_ROOT/$(basename "$APP_PATH")"
+	ln -sf /Applications "$STAGE_DMG_ROOT/Applications"
+
+	# Build into the staging dir, not into dist/, to avoid xattrs reappearing
+	# during creation on iCloud-synced volumes. Copy the final artifact at the
+	# end.
+	STAGE_DMG="$STAGE_ROOT/$(basename "$DMG_OUTPUT")"
+	log "Creating DMG: $STAGE_DMG"
+	hdiutil create \
+		-volname "$DMG_VOLNAME" \
+		-srcfolder "$STAGE_DMG_ROOT" \
+		-format UDZO \
+		-ov \
+		"$STAGE_DMG" >/dev/null
+
+	log "Signing DMG"
+	codesign --force --sign "$CODESIGN_IDENTITY" --timestamp "$STAGE_DMG"
+	codesign --verify --verbose=2 "$STAGE_DMG"
+
+	mkdir -p "$(dirname "$DMG_OUTPUT")"
+	cp "$STAGE_DMG" "$DMG_OUTPUT"
+	DMG_PATH="$DMG_OUTPUT"
 fi
 
 # --- Step 3: Notarize --------------------------------------------------
@@ -147,15 +176,16 @@ fi
 if ! $SKIP_NOTARIZE; then
 	if ! $SKIP_DMG && [[ -f "$DMG_PATH" ]]; then
 		NOTARIZE_TARGET="$DMG_PATH"
+		CLEANUP_NOTARIZE_TARGET=false
 	else
-		# Create a temporary zip for notarization
-		NOTARIZE_TARGET="${APP_PATH%.app}.zip"
+		NOTARIZE_TARGET="$(mktemp -t macnotepp-notarize).zip"
 		log "Creating zip for notarization: $NOTARIZE_TARGET"
 		ditto -c -k --keepParent "$APP_PATH" "$NOTARIZE_TARGET"
+		CLEANUP_NOTARIZE_TARGET=true
 	fi
 
 	log "Submitting for notarization: $NOTARIZE_TARGET"
-	verbose "This may take several minutes..."
+	verbose "This typically takes 1-5 minutes."
 
 	xcrun notarytool submit "$NOTARIZE_TARGET" \
 		"${NOTARY_AUTH_FLAGS[@]}" \
@@ -167,21 +197,12 @@ if ! $SKIP_NOTARIZE; then
 	if ! $SKIP_DMG && [[ -f "$DMG_PATH" ]]; then
 		log "Stapling notarization ticket to DMG: $DMG_PATH"
 		xcrun stapler staple "$DMG_PATH"
-
-		# Rename unsigned DMG to signed name
-		if [[ "$DMG_PATH" == *"-unsigned.dmg" ]]; then
-			SIGNED_DMG="${DMG_PATH%-unsigned.dmg}.dmg"
-			mv "$DMG_PATH" "$SIGNED_DMG"
-			log "Renamed to: $SIGNED_DMG"
-			DMG_PATH="$SIGNED_DMG"
-		fi
 	fi
 
 	log "Stapling notarization ticket to app: $APP_PATH"
 	xcrun stapler staple "$APP_PATH"
 
-	# Clean up temp zip
-	if [[ "${NOTARIZE_TARGET:-}" == *.zip ]]; then
+	if $CLEANUP_NOTARIZE_TARGET; then
 		rm -f "$NOTARIZE_TARGET"
 	fi
 fi
