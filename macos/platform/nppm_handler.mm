@@ -379,6 +379,15 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			// V1 has no compare-specific toolbar; accept the call silently.
 			return TRUE;
 
+		case NPPM_GETCURRENTCMDLINE:
+			// MacNote++ launches through Cocoa document-open events rather
+			// than Notepad++'s Windows command-line parser. Report an empty
+			// command line so plugins such as ComparePlus can safely skip
+			// optional startup commands without logging an unhandled NPPM.
+			if (lParam && wParam > 0)
+				reinterpret_cast<wchar_t*>(lParam)[0] = L'\0';
+			return 0;
+
 		default:
 			NSLog(@"Unhandled NPPM message: 0x%X (offset +%d)", msg, msg - NPPMSG);
 			return 0;
