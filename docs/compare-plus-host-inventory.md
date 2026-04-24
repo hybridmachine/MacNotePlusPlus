@@ -1,6 +1,7 @@
 # ComparePlus Host-Surface Inventory
 
-Generated as part of Phase 0, Issue #100. Updated after Phase 3 ComparePlus host work.
+Generated as part of Phase 0, Issue #100. Updated after ComparePlus colors and
+Visual Filters work.
 
 Status note: "accepted no-op" means the macOS host consumes the message so
 ComparePlus can continue, but there is no equivalent visible macOS UI surface yet.
@@ -48,6 +49,18 @@ ComparePlus can continue, but there is no equivalent visible macOS UI surface ye
 | `NPPN_GLOBALMODIFIED` | Compare.cpp | **NOT EMITTED** |
 | `NPPN_DARKMODECHANGED` | Compare.cpp | **NOT EMITTED** |
 | `NPPN_WORDSTYLESUPDATED` | Compare.cpp | **NOT EMITTED** |
+
+## Dialog / Control Surface
+
+| Surface | Used In | macOS Status |
+|---------|---------|--------------|
+| Compare Options dialog | CompareOptionsDialog.cpp | **IMPLEMENTED** (template + real upstream dialog) |
+| Settings dialog | SettingsDialog.cpp | **IMPLEMENTED** (template + real upstream dialog) |
+| Settings color controls | ColorCombo.h | **IMPLEMENTED** (NSColorWell bridge, persists through UserSettings) |
+| Visual Filters dialog | VisualFiltersDialog.cpp | **IMPLEMENTED** (template + real upstream dialog) |
+| About dialog / URL links | AboutDialog.cpp, URLCtrl.cpp | **NOT IMPLEMENTED** (accepted no-op stubs) |
+| NavBar docking panel | NavDialog.cpp | **NOT IMPLEMENTED** (blocked on `NPPM_DMM*` host surface) |
+| Progress dialog | ProgressDlg.cpp | **IMPLEMENTED** (functional no-UI stub; compare never stalls/cancels) |
 
 ## Already Implemented (working)
 
