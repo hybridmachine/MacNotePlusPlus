@@ -69,26 +69,12 @@ static std::wstring utf8ToWide(const char* utf8)
 
 // Translate a Win32 VK code / ASCII keycode from FuncItem::_pShKey to the
 // NSString keyEquivalent AppKit wants. Returns nil if the key can't be mapped.
-// Printable ASCII is used as-is, with letters lowered for AppKit.
-// VK_PRIOR/VK_NEXT/VK_HOME/VK_END/VK_INSERT/VK_DELETE and VK_F1..VK_F24 map
-// to their AppKit function-key unichars.
+// Navigation/function VKs map to their AppKit unichars. Printable ASCII and
+// common OEM punctuation keys map to their base character, with letters lowered
+// for AppKit.
 static NSString* nsKeyEquivalentForPluginKey(UCHAR key)
 {
 	if (key == 0) return nil;
-
-	if (key >= 0x21 && key <= 0x7E)
-	{
-		unichar c = static_cast<unichar>(
-			std::tolower(static_cast<unsigned char>(key)));
-		return [NSString stringWithCharacters:&c length:1];
-	}
-
-	// F1..F24 (Windows VK_F1 = 0x70, contiguous)
-	if (key >= VK_F1 && key <= VK_F1 + 23)
-	{
-		unichar fn = static_cast<unichar>(NSF1FunctionKey + (key - VK_F1));
-		return [NSString stringWithCharacters:&fn length:1];
-	}
 
 	unichar fn = 0;
 	switch (key)
@@ -108,9 +94,37 @@ static NSString* nsKeyEquivalentForPluginKey(UCHAR key)
 		case VK_TAB:    return @"\t";
 		case VK_SPACE:  return @" ";
 		case VK_BACK:   return [NSString stringWithFormat:@"%C", (unichar)NSBackspaceCharacter];
-		default: return nil;
+		case VK_OEM_1:      return @";";
+		case VK_OEM_PLUS:   return @"=";
+		case VK_OEM_COMMA:  return @",";
+		case VK_OEM_MINUS:  return @"-";
+		case VK_OEM_PERIOD: return @".";
+		case VK_OEM_2:      return @"/";
+		case VK_OEM_3:      return @"`";
+		case VK_OEM_4:      return @"[";
+		case VK_OEM_5:      return @"\\";
+		case VK_OEM_6:      return @"]";
+		case VK_OEM_7:      return @"'";
+		default: break;
 	}
-	return [NSString stringWithCharacters:&fn length:1];
+	if (fn)
+		return [NSString stringWithCharacters:&fn length:1];
+
+	// F1..F24 (Windows VK_F1 = 0x70, contiguous)
+	if (key >= VK_F1 && key <= VK_F1 + 23)
+	{
+		fn = static_cast<unichar>(NSF1FunctionKey + (key - VK_F1));
+		return [NSString stringWithCharacters:&fn length:1];
+	}
+
+	if (key >= 0x21 && key <= 0x7E)
+	{
+		unichar c = static_cast<unichar>(
+			std::tolower(static_cast<unsigned char>(key)));
+		return [NSString stringWithCharacters:&c length:1];
+	}
+
+	return nil;
 }
 
 // Apply a plugin-declared ShortcutKey to its NSMenuItem. Follows the
