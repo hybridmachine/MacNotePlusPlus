@@ -22,10 +22,10 @@ static CGFloat colorByte(BYTE value)
 
 static NSColor* nsColorFromColorRef(COLORREF color)
 {
-	return [NSColor colorWithCalibratedRed:colorByte(GetRValue(color))
-	                                green:colorByte(GetGValue(color))
-	                                 blue:colorByte(GetBValue(color))
-	                                alpha:1.0];
+	return [NSColor colorWithSRGBRed:colorByte(GetRValue(color))
+	                           green:colorByte(GetGValue(color))
+	                            blue:colorByte(GetBValue(color))
+	                           alpha:1.0];
 }
 
 static BYTE componentToByte(CGFloat value)
