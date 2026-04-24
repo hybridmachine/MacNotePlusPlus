@@ -1,6 +1,9 @@
 # ComparePlus Host-Surface Inventory
 
-Generated as part of Phase 0, Issue #100. Updated after Phase 1 implementation.
+Generated as part of Phase 0, Issue #100. Updated after Phase 3 ComparePlus host work.
+
+Status note: "accepted no-op" means the macOS host consumes the message so
+ComparePlus can continue, but there is no equivalent visible macOS UI surface yet.
 
 ## Tier 1: Blocks Basic Compare
 
@@ -20,8 +23,8 @@ Generated as part of Phase 0, Issue #100. Updated after Phase 1 implementation.
 
 | Message | Used In | Host Status |
 |---------|---------|-------------|
-| `NPPM_ADDTOOLBARICON_FORDARKMODE` | Compare.cpp (onToolBarReady) | **NOT IMPLEMENTED** |
-| `NPPM_HIDETABBAR` | Compare.cpp (5 calls) | **NOT IMPLEMENTED** |
+| `NPPM_ADDTOOLBARICON_FORDARKMODE` | Compare.cpp (onToolBarReady) | **IMPLEMENTED** (accepted no-op, nppm_handler.mm) |
+| `NPPM_HIDETABBAR` | Compare.cpp (5 calls) | **IMPLEMENTED** (accepted no-op, nppm_handler.mm) |
 | `NPPM_GETMENUHANDLE` | Compare.cpp (NppState, 8 calls) | **IMPLEMENTED** (nppm_handler.mm) |
 | `NPPM_DMMREGASDCKDLG` | NavDialog.cpp | **NOT IMPLEMENTED** |
 | `NPPM_DMMSHOW` / `NPPM_DMMHIDE` | NavDialog.cpp | **NOT IMPLEMENTED** |
@@ -32,11 +35,11 @@ Generated as part of Phase 0, Issue #100. Updated after Phase 1 implementation.
 
 | Message | Used In | Host Status |
 |---------|---------|-------------|
-| `NPPM_SETSTATUSBAR` | Compare.cpp (setStatus) | **NOT IMPLEMENTED** |
-| `NPPM_ADDSCNMODIFIEDFLAGS` | Compare.cpp (onNppReady) | **IMPLEMENTED** (no-op, host forwards all SCN_MODIFIED) |
-| `NPPM_GETLINENUMBERWIDTHMODE` | Compare.cpp (NppState) | **NOT IMPLEMENTED** |
-| `NPPM_SETLINENUMBERWIDTHMODE` | Compare.cpp (3 calls) | **NOT IMPLEMENTED** |
-| `NPPM_GETCURRENTCMDLINE` | Compare.cpp (checkCmdLine) | **NOT IMPLEMENTED** |
+| `NPPM_SETSTATUSBAR` | Compare.cpp (setStatus) | **IMPLEMENTED** (accepted no-op, nppm_handler.mm) |
+| `NPPM_ADDSCNMODIFIEDFLAGS` | Compare.cpp (onNppReady) | **IMPLEMENTED** (accepted no-op, host forwards all SCN_MODIFIED) |
+| `NPPM_GETLINENUMBERWIDTHMODE` | Compare.cpp (NppState) | **IMPLEMENTED** (nppm_handler.mm, tracks current mode) |
+| `NPPM_SETLINENUMBERWIDTHMODE` | Compare.cpp (3 calls) | **IMPLEMENTED** (compare_plus_visibility.mm, drives compare split state) |
+| `NPPM_GETCURRENTCMDLINE` | Compare.cpp (checkCmdLine) | **IMPLEMENTED** (nppm_handler.mm, returns empty command line) |
 | `NPPM_GETCURRENTNATIVELANGENCODING` | NppHelpers.h | **IMPLEMENTED** (nppm_handler.mm, returns UTF-8) |
 | `NPPN_GLOBALMODIFIED` | Compare.cpp | **NOT EMITTED** |
 | `NPPN_DARKMODECHANGED` | Compare.cpp | **NOT EMITTED** |
@@ -50,7 +53,9 @@ ALLOCATECMDID, ALLOCATEMARKER, ALLOCATEINDICATOR, GETFULLCURRENTPATH, GETFILENAM
 GETCURRENTDIRECTORY, GETNAMEPART, GETEXTPART, GETCURRENTWORD, GETCURRENTLINE, GETCURRENTCOLUMN,
 GETCURRENTBUFFERID, GETPOSFROMBUFFERID, GETBUFFERIDFROMPOS, GETFULLPATHFROMBUFFERID,
 DOOPEN, SWITCHTOFILE, SETBUFFERLANGTYPE, GETBUFFERLANGTYPE, GETMENUHANDLE,
-GETCURRENTNATIVELANGENCODING, ADDSCNMODIFIEDFLAGS
+ADDTOOLBARICON_FORDARKMODE, HIDETABBAR, SETSTATUSBAR, ADDSCNMODIFIEDFLAGS,
+GETLINENUMBERWIDTHMODE, SETLINENUMBERWIDTHMODE, GETCURRENTCMDLINE,
+GETCURRENTNATIVELANGENCODING
 
 NPPN: NPPN_READY, NPPN_SHUTDOWN, NPPN_LANGCHANGED, NPPN_FILEBEFORECLOSE, NPPN_FILESAVED,
 NPPN_FILEOPENED, NPPN_FILECLOSED, NPPN_BUFFERACTIVATED, NPPN_BEFORESHUTDOWN, NPPN_TBMODIFICATION
