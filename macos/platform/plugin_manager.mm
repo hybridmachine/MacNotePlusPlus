@@ -7,6 +7,7 @@
 #include "win32_menu_impl.h"
 #include "winuser.h"
 
+#include <cctype>
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
 #include <dlfcn.h>
@@ -68,18 +69,17 @@ static std::wstring utf8ToWide(const char* utf8)
 
 // Translate a Win32 VK code / ASCII keycode from FuncItem::_pShKey to the
 // NSString keyEquivalent AppKit wants. Returns nil if the key can't be mapped.
-// Printable ASCII (letters, digits, most punctuation) is used as-is, lowered.
+// Printable ASCII is used as-is, with letters lowered for AppKit.
 // VK_PRIOR/VK_NEXT/VK_HOME/VK_END/VK_INSERT/VK_DELETE and VK_F1..VK_F24 map
 // to their AppKit function-key unichars.
 static NSString* nsKeyEquivalentForPluginKey(UCHAR key)
 {
 	if (key == 0) return nil;
 
-	// Printable ASCII — letters and digits
-	if ((key >= '0' && key <= '9') ||
-	    (key >= 'A' && key <= 'Z'))
+	if (key >= 0x21 && key <= 0x7E)
 	{
-		unichar c = static_cast<unichar>(tolower(key));
+		unichar c = static_cast<unichar>(
+			std::tolower(static_cast<unsigned char>(key)));
 		return [NSString stringWithCharacters:&c length:1];
 	}
 

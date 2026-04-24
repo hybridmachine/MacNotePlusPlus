@@ -71,8 +71,10 @@ static int toNppEncoding(int encoding)
 	{
 		case ENC_ANSI:     return 0;
 		case ENC_UTF8_BOM: return 1;
-		case ENC_UTF16_BE: return 2;
-		case ENC_UTF16_LE: return 3;
+		// MacNote++ currently saves UTF-16 without a BOM; Notepad++ UniMode
+		// values 6/7 represent UTF-16 BE/LE without BOM.
+		case ENC_UTF16_BE: return 6;
+		case ENC_UTF16_LE: return 7;
 		case ENC_UTF8:     return 4;
 		default:           return 4;
 	}
