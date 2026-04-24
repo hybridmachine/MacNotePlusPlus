@@ -322,6 +322,7 @@ int MacPluginManager::loadPluginFromPath(const std::wstring& pluginFilePath)
 		pi->_funcItems[i]._cmdID = cmdId;
 
 		PluginCommand cmd;
+		cmd._cmdId = cmdId;
 		cmd._pluginName = pi->_displayName;
 		cmd._pFunc = pi->_funcItems[i]._pFunc;
 		_pluginsCommands.push_back(cmd);
@@ -417,14 +418,16 @@ HMENU MacPluginManager::initMenu(HMENU hPluginsMenu)
 	return _hPluginsMenu;
 }
 
-void MacPluginManager::runPluginCommand(int index)
+bool MacPluginManager::runPluginCommandById(int cmdId)
 {
-	if (index < 0 || index >= static_cast<int>(_pluginsCommands.size()))
-		return;
-
-	auto& cmd = _pluginsCommands[index];
-	if (cmd._pFunc)
+	for (auto& cmd : _pluginsCommands)
 	{
+		if (cmd._cmdId != cmdId)
+			continue;
+
+		if (!cmd._pFunc)
+			return true;
+
 		try
 		{
 			cmd._pFunc();
@@ -434,7 +437,10 @@ void MacPluginManager::runPluginCommand(int index)
 			NSLog(@"Plugin command crashed: %@",
 			      [NSString stringWithUTF8String:wideToUTF8(cmd._pluginName).c_str()]);
 		}
+		return true;
 	}
+
+	return false;
 }
 
 void MacPluginManager::notify(const SCNotification* notification)

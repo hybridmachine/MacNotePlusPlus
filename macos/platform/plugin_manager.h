@@ -37,6 +37,7 @@ struct MacPluginInfo
 
 struct PluginCommand
 {
+	int _cmdId = 0;
 	std::wstring _pluginName;
 	PFUNCPLUGINCMD _pFunc = nullptr;
 };
@@ -54,7 +55,7 @@ public:
 
 	HMENU initMenu(HMENU hPluginsMenu);
 
-	void runPluginCommand(int index);
+	bool runPluginCommandById(int cmdId);
 
 	void notify(const SCNotification* notification);
 	void relayNppMessages(UINT Message, WPARAM wParam, LPARAM lParam);

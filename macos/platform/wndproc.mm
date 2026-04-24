@@ -88,12 +88,9 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 
 			// Plugin commands: static FuncItem range
-			if (cmdId >= 22000 && cmdId < 23000) // ID_PLUGINS_CMD .. ID_PLUGINS_CMD_LIMIT
-			{
-				int i = cmdId - 22000;
-				pluginManager().runPluginCommand(i);
+			if (pluginManager().runPluginCommandById(static_cast<int>(cmdId)))
 				return 0;
-			}
+
 			// Plugin commands: dynamic range (allocated via NPPM_ALLOCATECMDID)
 			if (pluginManager().inDynamicRange(cmdId))
 				return 0;
