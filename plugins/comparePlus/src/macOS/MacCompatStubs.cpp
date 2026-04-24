@@ -161,6 +161,7 @@ void URLCtrl::create(HWND, int, HWND)                {}
 void URLCtrl::destroy()                              {}
 
 void ColorCombo::init(HINSTANCE, HWND, HWND) {}
+void ColorCombo::drawColor() {}
 
 // ---------------------------------------------------------------------------
 // LibHelpers — git/svn integration. Compare.cpp references these from menu

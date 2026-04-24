@@ -65,6 +65,21 @@ static LRESULT copyWideToBuffer(const std::wstring& src, WPARAM maxChars, LPARAM
 	return TRUE;
 }
 
+static int toNppEncoding(int encoding)
+{
+	switch (encoding)
+	{
+		case ENC_ANSI:     return 0;
+		case ENC_UTF8_BOM: return 1;
+		// MacNote++ currently saves UTF-16 without a BOM; Notepad++ UniMode
+		// values 6/7 represent UTF-16 BE/LE without BOM.
+		case ENC_UTF16_BE: return 6;
+		case ENC_UTF16_LE: return 7;
+		case ENC_UTF8:     return 4;
+		default:           return 4;
+	}
+}
+
 // ============================================================
 // NPPMSG range (WM_USER + 1000)
 // ============================================================
@@ -325,6 +340,16 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return TRUE;
 		}
 
+		case NPPM_GETBUFFERENCODING:
+		{
+			uint64_t bufferId = static_cast<uint64_t>(wParam);
+			auto [viewIdx, tabIndex] = findDocByBufferId(bufferId);
+			if (viewIdx < 0)
+				return -1;
+			auto& viewDocs = (viewIdx == 0) ? ctx().documents : ctx().documents2;
+			return toNppEncoding(viewDocs[tabIndex].encoding);
+		}
+
 		// ---- File operation messages (Phase 1b, issue #100) ----
 
 		case NPPM_DOOPEN:
@@ -370,14 +395,34 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			// it as a compare-mode trigger.
 			return TRUE;
 
+		case NPPM_ISTABBARHIDDEN:
+			return FALSE;
+
 		case NPPM_SETSTATUSBAR:
 			// Cosmetic no-op. Plugin posts "Compared X vs Y" strings we ignore.
 			return TRUE;
+
+		case NPPM_GETBOOKMARKID:
+			return BOOKMARK_MARKER;
 
 		case NPPM_ADDTOOLBARICON_FORDARKMODE:
 			// Plugin tries to register toolbar icons during NPPN_TBMODIFICATION.
 			// V1 has no compare-specific toolbar; accept the call silently.
 			return TRUE;
+
+		case NPPM_GETNATIVELANGFILENAME:
+			if (lParam && wParam > 0)
+				reinterpret_cast<char*>(lParam)[0] = '\0';
+			return 0;
+
+		case NPPM_GETCURRENTCMDLINE:
+			// MacNote++ launches through Cocoa document-open events rather
+			// than Notepad++'s Windows command-line parser. Report an empty
+			// command line so plugins such as ComparePlus can safely skip
+			// optional startup commands without logging an unhandled NPPM.
+			if (lParam && wParam > 0)
+				reinterpret_cast<wchar_t*>(lParam)[0] = L'\0';
+			return 0;
 
 		default:
 			NSLog(@"Unhandled NPPM message: 0x%X (offset +%d)", msg, msg - NPPMSG);

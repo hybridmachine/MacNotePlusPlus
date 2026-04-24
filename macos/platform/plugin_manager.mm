@@ -4,7 +4,10 @@
 #import <Cocoa/Cocoa.h>
 #include "plugin_manager.h"
 #include "handle_registry.h"
+#include "win32_menu_impl.h"
+#include "winuser.h"
 
+#include <cctype>
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
 #include <dlfcn.h>
@@ -62,6 +65,84 @@ static std::wstring utf8ToWide(const char* utf8)
 	if (!data || data.length < sizeof(wchar_t)) return L"";
 	return std::wstring(reinterpret_cast<const wchar_t*>(data.bytes),
 	                    data.length / sizeof(wchar_t));
+}
+
+// Translate a Win32 VK code / ASCII keycode from FuncItem::_pShKey to the
+// NSString keyEquivalent AppKit wants. Returns nil if the key can't be mapped.
+// Navigation/function VKs map to their AppKit unichars. Printable ASCII and
+// common OEM punctuation keys map to their base character, with letters lowered
+// for AppKit.
+static NSString* nsKeyEquivalentForPluginKey(UCHAR key)
+{
+	if (key == 0) return nil;
+
+	unichar fn = 0;
+	switch (key)
+	{
+		case VK_PRIOR:  fn = NSPageUpFunctionKey;   break;
+		case VK_NEXT:   fn = NSPageDownFunctionKey; break;
+		case VK_HOME:   fn = NSHomeFunctionKey;     break;
+		case VK_END:    fn = NSEndFunctionKey;      break;
+		case VK_INSERT: fn = NSInsertFunctionKey;   break;
+		case VK_DELETE: fn = NSDeleteFunctionKey;   break;
+		case VK_LEFT:   fn = NSLeftArrowFunctionKey;  break;
+		case VK_RIGHT:  fn = NSRightArrowFunctionKey; break;
+		case VK_UP:     fn = NSUpArrowFunctionKey;    break;
+		case VK_DOWN:   fn = NSDownArrowFunctionKey;  break;
+		case VK_RETURN: return @"\r";
+		case VK_ESCAPE: return [NSString stringWithFormat:@"%C", (unichar)27];
+		case VK_TAB:    return @"\t";
+		case VK_SPACE:  return @" ";
+		case VK_BACK:   return [NSString stringWithFormat:@"%C", (unichar)NSBackspaceCharacter];
+		case VK_OEM_1:      return @";";
+		case VK_OEM_PLUS:   return @"=";
+		case VK_OEM_COMMA:  return @",";
+		case VK_OEM_MINUS:  return @"-";
+		case VK_OEM_PERIOD: return @".";
+		case VK_OEM_2:      return @"/";
+		case VK_OEM_3:      return @"`";
+		case VK_OEM_4:      return @"[";
+		case VK_OEM_5:      return @"\\";
+		case VK_OEM_6:      return @"]";
+		case VK_OEM_7:      return @"'";
+		default: break;
+	}
+	if (fn)
+		return [NSString stringWithCharacters:&fn length:1];
+
+	// F1..F24 (Windows VK_F1 = 0x70, contiguous)
+	if (key >= VK_F1 && key <= VK_F1 + 23)
+	{
+		fn = static_cast<unichar>(NSF1FunctionKey + (key - VK_F1));
+		return [NSString stringWithCharacters:&fn length:1];
+	}
+
+	if (key >= 0x21 && key <= 0x7E)
+	{
+		unichar c = static_cast<unichar>(
+			std::tolower(static_cast<unsigned char>(key)));
+		return [NSString stringWithCharacters:&c length:1];
+	}
+
+	return nil;
+}
+
+// Apply a plugin-declared ShortcutKey to its NSMenuItem. Follows the
+// Ctrl->Cmd convention the rest of the shim already uses (see
+// win32_menu_impl.mm:setKeyEquivalentFromText) so plugin hotkeys feel
+// consistent with built-in ones.
+static void applyPluginShortcut(NSMenuItem* item, const ShortcutKey& sk)
+{
+	NSString* key = nsKeyEquivalentForPluginKey(sk._key);
+	if (!key) return;
+
+	NSUInteger mods = 0;
+	if (sk._isCtrl)  mods |= NSEventModifierFlagCommand;
+	if (sk._isAlt)   mods |= NSEventModifierFlagOption;
+	if (sk._isShift) mods |= NSEventModifierFlagShift;
+
+	item.keyEquivalent = key;
+	item.keyEquivalentModifierMask = mods;
 }
 
 // Validate that a Mach-O binary matches the current architecture
@@ -255,6 +336,7 @@ int MacPluginManager::loadPluginFromPath(const std::wstring& pluginFilePath)
 		pi->_funcItems[i]._cmdID = cmdId;
 
 		PluginCommand cmd;
+		cmd._cmdId = cmdId;
 		cmd._pluginName = pi->_displayName;
 		cmd._pFunc = pi->_funcItems[i]._pFunc;
 		_pluginsCommands.push_back(cmd);
@@ -331,6 +413,14 @@ HMENU MacPluginManager::initMenu(HMENU hPluginsMenu)
 				if (fi._init2Check)
 					flags |= MF_CHECKED;
 				::AppendMenuW(pluginSub, flags, static_cast<UINT_PTR>(fi._cmdID), fi._itemName);
+
+				if (fi._pShKey)
+				{
+					NSMenu* subMenu = (__bridge NSMenu*)Win32Menu_GetNSMenu(pluginSub);
+					NSInteger count = subMenu ? [subMenu numberOfItems] : 0;
+					if (count > 0)
+						applyPluginShortcut([subMenu itemAtIndex:count - 1], *fi._pShKey);
+				}
 			}
 		}
 
@@ -342,14 +432,16 @@ HMENU MacPluginManager::initMenu(HMENU hPluginsMenu)
 	return _hPluginsMenu;
 }
 
-void MacPluginManager::runPluginCommand(int index)
+bool MacPluginManager::runPluginCommandById(int cmdId)
 {
-	if (index < 0 || index >= static_cast<int>(_pluginsCommands.size()))
-		return;
-
-	auto& cmd = _pluginsCommands[index];
-	if (cmd._pFunc)
+	for (auto& cmd : _pluginsCommands)
 	{
+		if (cmd._cmdId != cmdId)
+			continue;
+
+		if (!cmd._pFunc)
+			return true;
+
 		try
 		{
 			cmd._pFunc();
@@ -359,7 +451,10 @@ void MacPluginManager::runPluginCommand(int index)
 			NSLog(@"Plugin command crashed: %@",
 			      [NSString stringWithUTF8String:wideToUTF8(cmd._pluginName).c_str()]);
 		}
+		return true;
 	}
+
+	return false;
 }
 
 void MacPluginManager::notify(const SCNotification* notification)
