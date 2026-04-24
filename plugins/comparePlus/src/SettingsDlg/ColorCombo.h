@@ -32,10 +32,14 @@ public :
 	};
 
 	virtual void init(HINSTANCE hInst, HWND hParent, HWND hCombo);
+#ifdef __APPLE__
+	virtual void destroy();
+#else
 	virtual void destroy()
 	{
 		::DestroyWindow(_hSelf);
 	};
+#endif
 
 	void onSelect()
 	{
@@ -45,7 +49,11 @@ public :
 	void setColor(COLORREF color)
 	{
 		_color = color;
+#ifdef __APPLE__
+		drawColor();
+#else
 		::RedrawWindow(_comboBoxInfo.hwndCombo, &_comboBoxInfo.rcItem, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+#endif
 	};
 
 	COLORREF getColor()

@@ -152,16 +152,13 @@ UINT     VisualFiltersDialog::doDialog(UserSettings*)       { return 0; }
 intptr_t VisualFiltersDialog::run_dlgProc(UINT, WPARAM, LPARAM)  { return 0; }
 
 // ---------------------------------------------------------------------------
-// URLCtrl / ColorCombo — members of AboutDialog and SettingsDialog
-// respectively. Anchor their vtables with one out-of-line virtual each.
+// URLCtrl — member of AboutDialog. Anchor its vtable with out-of-line no-ops.
+// ColorCombo has a macOS implementation in ColorComboMac.mm.
 // ---------------------------------------------------------------------------
 
 void URLCtrl::create(HWND, const wchar_t*, COLORREF) {}
 void URLCtrl::create(HWND, int, HWND)                {}
 void URLCtrl::destroy()                              {}
-
-void ColorCombo::init(HINSTANCE, HWND, HWND) {}
-void ColorCombo::drawColor() {}
 
 // ---------------------------------------------------------------------------
 // LibHelpers — git/svn integration. Compare.cpp references these from menu
