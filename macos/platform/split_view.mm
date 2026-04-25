@@ -45,6 +45,14 @@ void updateSplitMenuState()
 		CheckMenuItem(hMenu, IDM_VIEW_SYNCHRONIZE_SCROLLING, MF_BYCOMMAND | MF_UNCHECKED);
 }
 
+static NSRect frameInContentView(NSView* view, NSView* contentView)
+{
+	if (!view || !contentView)
+		return NSZeroRect;
+
+	return [view convertRect:view.bounds toView:contentView];
+}
+
 void layoutSplitTopTabBars()
 {
 	if (!ctx().mainWindow || !ctx().tabHwnd)
@@ -61,16 +69,15 @@ void layoutSplitTopTabBars()
 	if (leftTabInfo && leftTabInfo->nativeView)
 	{
 		NSView* leftTabView = (__bridge NSView*)leftTabInfo->nativeView;
-		if (ctx().isSplit && ctx().editorContainer)
+		if (ctx().editorContainer)
 		{
-			leftTabView.frame = NSMakeRect(ctx().editorContainer.frame.origin.x, topY,
-			                               ctx().editorContainer.frame.size.width, tabHeight);
+			NSRect editorFrame = frameInContentView(ctx().editorContainer, contentView);
+			leftTabView.frame = NSMakeRect(editorFrame.origin.x, topY,
+			                               editorFrame.size.width, tabHeight);
 		}
 		else
 		{
-			NSRect editorFrame = ctx().editorContainer ? ctx().editorContainer.frame :
-				NSMakeRect(0, 0, contentView.bounds.size.width, 0);
-			leftTabView.frame = NSMakeRect(editorFrame.origin.x, topY, editorFrame.size.width, tabHeight);
+			leftTabView.frame = NSMakeRect(0, topY, contentView.bounds.size.width, tabHeight);
 		}
 	}
 
@@ -80,8 +87,9 @@ void layoutSplitTopTabBars()
 		if (rightTabInfo && rightTabInfo->nativeView)
 		{
 			NSView* rightTabView = (__bridge NSView*)rightTabInfo->nativeView;
-			rightTabView.frame = NSMakeRect(ctx().editorContainer2.frame.origin.x, topY,
-			                                ctx().editorContainer2.frame.size.width, tabHeight);
+			NSRect editorFrame = frameInContentView(ctx().editorContainer2, contentView);
+			rightTabView.frame = NSMakeRect(editorFrame.origin.x, topY,
+			                                editorFrame.size.width, tabHeight);
 		}
 	}
 }
