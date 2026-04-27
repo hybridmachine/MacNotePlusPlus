@@ -563,6 +563,7 @@ void doMoveToOtherView()
 		dstDocs[dstIdx].firstVisibleLine = docCopy.firstVisibleLine;
 		dstDocs[dstIdx].bookmarkedLines = docCopy.bookmarkedLines;
 		dstDocs[dstIdx].zoomLevel = docCopy.zoomLevel;
+		dstDocs[dstIdx].readOnly = docCopy.readOnly;
 	}
 
 	closeTabFromView(srcView, srcTab);
@@ -598,5 +599,6 @@ void doCloneToOtherView()
 		dstDocs[dstIdx].firstVisibleLine = docCopy.firstVisibleLine;
 		dstDocs[dstIdx].bookmarkedLines = docCopy.bookmarkedLines;
 		dstDocs[dstIdx].zoomLevel = docCopy.zoomLevel;
+		dstDocs[dstIdx].readOnly = docCopy.readOnly;
 	}
 }

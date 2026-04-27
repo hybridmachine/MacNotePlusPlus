@@ -1,7 +1,7 @@
 # ComparePlus Host-Surface Inventory
 
 Generated as part of Phase 0, Issue #100. Updated after ComparePlus colors,
-Visual Filters, and navigation command work.
+Visual Filters, and navigation commands work.
 
 Status note: "accepted no-op" means the macOS host consumes the message so
 ComparePlus can continue, but there is no equivalent visible macOS UI surface yet.

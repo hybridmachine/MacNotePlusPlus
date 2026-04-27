@@ -57,6 +57,9 @@ void updateSynchronizeScrollingMenu(HWND hWnd)
 
 void togglePluginVerticalSync(HWND hWnd)
 {
+	if (!ctx().isSplit)
+		return;
+
 	setSyncScrollingEnabled(!ctx().syncScrolling);
 	updateSynchronizeScrollingMenu(hWnd);
 }
