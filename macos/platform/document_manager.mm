@@ -54,6 +54,7 @@ void saveViewState(void* sci, std::vector<DocumentData>& docs, int tabIdx)
 	doc.anchorPos = ScintillaBridge_sendMessage(sci, SCI_GETANCHOR, 0, 0);
 	doc.firstVisibleLine = ScintillaBridge_sendMessage(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
 	doc.zoomLevel = static_cast<int>(ScintillaBridge_sendMessage(sci, SCI_GETZOOM, 0, 0));
+	doc.readOnly = ScintillaBridge_sendMessage(sci, SCI_GETREADONLY, 0, 0) != 0;
 	if (doc.savePointValid)
 		doc.modified = ScintillaBridge_sendMessage(sci, SCI_GETMODIFY, 0, 0) != 0;
 
@@ -82,6 +83,7 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 
 	auto& doc = docs[tabIndex];
 	ctx().suppressSavePointNotifications = true;
+	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
 	ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)doc.content.c_str());
 	if (!doc.modified)
 		ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
@@ -98,6 +100,7 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 		ScintillaBridge_sendMessage(sci, SCI_MARKERADD, bkLine, BOOKMARK_MARKER);
 
 	ScintillaBridge_sendMessage(sci, SCI_SETZOOM, doc.zoomLevel, 0);
+	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, doc.readOnly ? 1 : 0, 0);
 
 	refreshLineNumberMargin(sci);
 }
@@ -203,6 +206,7 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 	activeTab = newIndex;
 
 	ctx().suppressSavePointNotifications = true;
+	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
 	ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)content.c_str());
 	ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
 	ScintillaBridge_sendMessage(sci, SCI_GOTOPOS, 0, 0);

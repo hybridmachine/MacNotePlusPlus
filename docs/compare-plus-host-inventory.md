@@ -1,7 +1,7 @@
 # ComparePlus Host-Surface Inventory
 
-Generated as part of Phase 0, Issue #100. Updated after ComparePlus colors and
-Visual Filters work.
+Generated as part of Phase 0, Issue #100. Updated after ComparePlus colors,
+Visual Filters, and navigation commands work.
 
 Status note: "accepted no-op" means the macOS host consumes the message so
 ComparePlus can continue, but there is no equivalent visible macOS UI surface yet.
@@ -49,6 +49,20 @@ ComparePlus can continue, but there is no equivalent visible macOS UI surface ye
 | `NPPN_GLOBALMODIFIED` | Compare.cpp | **NOT EMITTED** |
 | `NPPN_DARKMODECHANGED` | Compare.cpp | **NOT EMITTED** |
 | `NPPN_WORDSTYLESUPDATED` | Compare.cpp | **NOT EMITTED** |
+
+## Command Alias / Navigation Surface
+
+| Command | Used In | Host Status |
+|---------|---------|-------------|
+| `IDM_VIEW_GOTO_ANOTHER_VIEW` (`10001`) | NppHelpers.cpp (moveFileToOtherView) | **IMPLEMENTED** (aliases to `doMoveToOtherView`) |
+| `IDM_VIEW_CLONE_TO_ANOTHER_VIEW` (`10002`) | Plugin-compatible clone commands | **IMPLEMENTED** (aliases to `doCloneToOtherView`) |
+| `IDM_VIEW_SYNSCROLLV` (`44035`) | Compare.cpp (NppState compare/normal mode) | **IMPLEMENTED** (maps to host synchronized scrolling state) |
+| `IDM_VIEW_SYNSCROLLH` (`44036`) | Compare.cpp (NppState compare/normal mode) | **IMPLEMENTED** (accepted no-op; macOS has no separate horizontal sync surface) |
+| `IDM_VIEW_SWITCHTO_OTHER_VIEW` (`44072`) | Compare.cpp (split-view compare setup) | **IMPLEMENTED** (focuses the other split editor without moving the document) |
+| `IDM_VIEW_TAB_NEXT` (`44095`) | Compare.cpp (single-view compare setup) | **IMPLEMENTED** (activates next tab in active view) |
+| `IDM_VIEW_TAB_PREV` (`44096`) | Compare.cpp (single-view compare setup) | **IMPLEMENTED** (activates previous tab in active view) |
+| `IDM_VIEW_TAB_MOVEBACKWARD` (`44099`) | Compare.cpp (compare setup tab ordering) | **IMPLEMENTED** (moves active tab one slot backward) |
+| `IDM_EDIT_SETREADONLY` (`42028`) | Compare.cpp (temp compare buffers) | **IMPLEMENTED** (toggles Scintilla read-only state for active buffer) |
 
 ## Dialog / Control Surface
 
