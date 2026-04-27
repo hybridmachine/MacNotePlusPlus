@@ -71,6 +71,10 @@ constexpr double NPP_STATUS_BAR_HEIGHT = 22.0;
 #define IDM_EDIT_INSERT_DATETIME_LONG  42047
 #define IDM_EDIT_AUTOCLOSE_BRACKETS  42048
 
+// Upstream Notepad++ command IDs used by vendored plugins.
+// Keep these numeric values aligned with plugins/*/src/NppAPI/menuCmdID.h.
+#define IDM_EDIT_SETREADONLY          42028
+
 // Case conversions (Sprint P2)
 #define IDM_EDIT_SENTENCECASE    42100
 #define IDM_EDIT_INVERTCASE      42101
@@ -117,6 +121,16 @@ constexpr double NPP_STATUS_BAR_HEIGHT = 22.0;
 #define IDM_VIEW_FILEBROWSER         42088
 #define IDM_VIEW_FILESWITCHER        42089
 #define IDM_FILE_OPENFOLDER          42094
+
+// Upstream Notepad++ view command IDs sent by plugins through NPPM_MENUCOMMAND.
+#define IDM_VIEW_GOTO_ANOTHER_VIEW     10001
+#define IDM_VIEW_CLONE_TO_ANOTHER_VIEW 10002
+#define IDM_VIEW_SYNSCROLLV            44035
+#define IDM_VIEW_SYNSCROLLH            44036
+#define IDM_VIEW_SWITCHTO_OTHER_VIEW   44072
+#define IDM_VIEW_TAB_NEXT              44095
+#define IDM_VIEW_TAB_PREV              44096
+#define IDM_VIEW_TAB_MOVEBACKWARD      44099
 
 // Tab context menu command IDs
 #define IDM_TAB_CLOSE            42200
@@ -240,6 +254,7 @@ enum {
 	SCI_SCROLLCARET = 2169,
 	SCI_GETSELECTIONSTART = 2143,
 	SCI_GETSELECTIONEND = 2145,
+	SCI_GETREADONLY = 2140,
 	SCI_SETREADONLY = 2171,
 	SCI_SETTARGETSTART = 2190,
 	SCI_GETTARGETSTART = 2191,

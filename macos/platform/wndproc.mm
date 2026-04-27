@@ -43,6 +43,97 @@
 #include "nppm_handler.h"
 #include "Notepad_plus_msgs.h"
 
+namespace {
+
+void updateSynchronizeScrollingMenu(HWND hWnd)
+{
+	HMENU hMenu = GetMenu(hWnd);
+	if (hMenu)
+	{
+		CheckMenuItem(hMenu, IDM_VIEW_SYNCHRONIZE_SCROLLING,
+		              MF_BYCOMMAND | (ctx().syncScrolling ? MF_CHECKED : MF_UNCHECKED));
+	}
+}
+
+void togglePluginVerticalSync(HWND hWnd)
+{
+	setSyncScrollingEnabled(!ctx().syncScrolling);
+	updateSynchronizeScrollingMenu(hWnd);
+}
+
+void focusEditorView(int viewIndex)
+{
+	if (viewIndex < 0 || viewIndex > 1)
+		return;
+	if (viewIndex == 1 && !ctx().isSplit)
+		return;
+
+	void* sci = (viewIndex == 0) ? ctx().scintillaView : ctx().scintillaView2;
+	if (!sci)
+		return;
+
+	ScintillaBridge_focus(sci);
+	ctx().activeView = viewIndex;
+	bindDocumentMapToActiveView();
+	bindFunctionListToActiveView();
+	bindFileSwitcherToActiveView();
+	if (isIncrementalSearchVisible())
+		updateIncrementalSearchTarget();
+	updateStatusBar();
+	updateWindowDocumentEdited();
+}
+
+void focusOtherEditorView()
+{
+	if (!ctx().isSplit)
+		return;
+	focusEditorView(ctx().activeView == 0 ? 1 : 0);
+}
+
+void switchActiveTabByOffset(int offset)
+{
+	auto& docs = ctx().activeDocuments();
+	int& activeTab = ctx().activeTabIndex();
+	if (docs.size() < 2 || activeTab < 0)
+		return;
+
+	const int count = static_cast<int>(docs.size());
+	int tabIndex = (activeTab + offset) % count;
+	if (tabIndex < 0)
+		tabIndex += count;
+	switchToTabInView(ctx().activeView, tabIndex);
+}
+
+void moveActiveTabBackward()
+{
+	int& activeTab = ctx().activeTabIndex();
+	if (activeTab <= 0)
+		return;
+
+	reorderTabInView(ctx().activeView, activeTab, activeTab - 1);
+	HWND tabHwnd = ctx().activeTabHwnd();
+	if (tabHwnd)
+		SendMessageW(tabHwnd, TCM_SETCURSEL, activeTab, 0);
+}
+
+void toggleActiveReadOnly()
+{
+	void* sci = ctx().activeScintillaView();
+	if (!sci)
+		return;
+
+	bool readOnly = ScintillaBridge_sendMessage(sci, SCI_GETREADONLY, 0, 0) != 0;
+	bool newReadOnly = !readOnly;
+	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, newReadOnly ? 1 : 0, 0);
+
+	auto& docs = ctx().activeDocuments();
+	int tabIdx = ctx().activeTabIndex();
+	if (tabIdx >= 0 && tabIdx < static_cast<int>(docs.size()))
+		docs[tabIdx].readOnly = newReadOnly;
+}
+
+} // namespace
+
 LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -200,6 +291,9 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					if (sci) ScintillaBridge_sendMessage(sci, SCI_SELECTALL, 0, 0);
 					return 0;
 				}
+				case IDM_EDIT_SETREADONLY:
+					toggleActiveReadOnly();
+					return 0;
 
 				case IDM_VIEW_WORDWRAP:
 				{
@@ -523,12 +617,14 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				if (!ctx().isSplit)
 					return 0;
 				setSyncScrollingEnabled(!ctx().syncScrolling);
-				HMENU hMenu = GetMenu(hWnd);
-				if (hMenu)
-					CheckMenuItem(hMenu, IDM_VIEW_SYNCHRONIZE_SCROLLING,
-					              MF_BYCOMMAND | (ctx().syncScrolling ? MF_CHECKED : MF_UNCHECKED));
+				updateSynchronizeScrollingMenu(hWnd);
 				return 0;
 			}
+			case IDM_VIEW_SYNSCROLLV:
+				togglePluginVerticalSync(hWnd);
+				return 0;
+			case IDM_VIEW_SYNSCROLLH:
+				return 0;
 			case IDM_VIEW_DOCUMENTMAP:
 			{
 				setDocumentMapEnabled(!ctx().documentMapEnabled);
@@ -611,12 +707,24 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				case IDM_VIEW_UNSPLIT:
 					doUnsplit();
 					return 0;
+				case IDM_VIEW_SWITCHTO_OTHER_VIEW:
+					focusOtherEditorView();
+					return 0;
+				case IDM_VIEW_TAB_PREV:
+					switchActiveTabByOffset(-1);
+					return 0;
+				case IDM_VIEW_TAB_NEXT:
+					switchActiveTabByOffset(1);
+					return 0;
+				case IDM_VIEW_TAB_MOVEBACKWARD:
+					moveActiveTabBackward();
+					return 0;
 				case IDM_VIEW_MOVETOOTHER:
-				case 10001: // IDM_VIEW_GOTO_ANOTHER_VIEW — used by ComparePlus & other plugins
+				case IDM_VIEW_GOTO_ANOTHER_VIEW: // used by ComparePlus & other plugins
 					doMoveToOtherView();
 					return 0;
 				case IDM_VIEW_CLONETOOTHER:
-				case 10002: // IDM_VIEW_CLONE_TO_ANOTHER_VIEW — used by plugins
+				case IDM_VIEW_CLONE_TO_ANOTHER_VIEW: // used by plugins
 					doCloneToOtherView();
 					return 0;
 

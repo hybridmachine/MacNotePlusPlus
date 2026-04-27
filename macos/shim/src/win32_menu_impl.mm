@@ -5,6 +5,7 @@
 #include "windows.h"
 #include "commdlg.h"
 #include "handle_registry.h"
+#include "npp_constants.h"
 #include "win32_string_helpers.h"
 
 #include <vector>
@@ -300,6 +301,27 @@ static NSMenuItem* findMenuItemRecursive(NSMenu* menu, UINT cmdId)
 		}
 	}
 	return nil;
+}
+
+static UINT menuCommandAlias(UINT cmdId)
+{
+	switch (cmdId)
+	{
+		case IDM_VIEW_SYNSCROLLV:
+			return IDM_VIEW_SYNCHRONIZE_SCROLLING;
+		default:
+			return cmdId;
+	}
+}
+
+static bool syntheticMenuState(UINT cmdId, UINT& state)
+{
+	if (cmdId == IDM_VIEW_SYNSCROLLH)
+	{
+		state = 0;
+		return true;
+	}
+	return false;
 }
 
 // ============================================================
@@ -754,6 +776,13 @@ BOOL DeleteMenu(HMENU hMenu, UINT uPosition, UINT uFlags)
 
 BOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable)
 {
+	if (!(uEnable & MF_BYPOSITION))
+	{
+		if (uIDEnableItem == IDM_VIEW_SYNSCROLLH)
+			return MF_ENABLED;
+		uIDEnableItem = menuCommandAlias(uIDEnableItem);
+	}
+
 	NSMenu* menu = resolveMenu(hMenu);
 	if (!menu) return static_cast<BOOL>(-1);
 
@@ -775,6 +804,13 @@ BOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable)
 
 BOOL CheckMenuItem(HMENU hMenu, UINT uIDCheckItem, UINT uCheck)
 {
+	if (!(uCheck & MF_BYPOSITION))
+	{
+		if (uIDCheckItem == IDM_VIEW_SYNSCROLLH)
+			return MF_UNCHECKED;
+		uIDCheckItem = menuCommandAlias(uIDCheckItem);
+	}
+
 	NSMenu* menu = resolveMenu(hMenu);
 	if (!menu) return static_cast<BOOL>(-1);
 
@@ -900,6 +936,14 @@ int GetMenuStringW(HMENU hMenu, UINT uIDItem, LPWSTR lpString, int cchMax, UINT 
 
 UINT GetMenuState(HMENU hMenu, UINT uId, UINT uFlags)
 {
+	if (!(uFlags & MF_BYPOSITION))
+	{
+		UINT state = 0;
+		if (syntheticMenuState(uId, state))
+			return state;
+		uId = menuCommandAlias(uId);
+	}
+
 	NSMenu* menu = resolveMenu(hMenu);
 	if (!menu) return static_cast<UINT>(-1);
 
