@@ -564,6 +564,9 @@ void doMoveToOtherView()
 		dstDocs[dstIdx].bookmarkedLines = docCopy.bookmarkedLines;
 		dstDocs[dstIdx].zoomLevel = docCopy.zoomLevel;
 		dstDocs[dstIdx].readOnly = docCopy.readOnly;
+		void* dstSci = (dstView == 0) ? ctx().scintillaView : ctx().scintillaView2;
+		if (dstSci)
+			ScintillaBridge_sendMessage(dstSci, SCI_SETREADONLY, docCopy.readOnly ? 1 : 0, 0);
 	}
 
 	closeTabFromView(srcView, srcTab);
@@ -600,5 +603,8 @@ void doCloneToOtherView()
 		dstDocs[dstIdx].bookmarkedLines = docCopy.bookmarkedLines;
 		dstDocs[dstIdx].zoomLevel = docCopy.zoomLevel;
 		dstDocs[dstIdx].readOnly = docCopy.readOnly;
+		void* dstSci = (dstView == 0) ? ctx().scintillaView : ctx().scintillaView2;
+		if (dstSci)
+			ScintillaBridge_sendMessage(dstSci, SCI_SETREADONLY, docCopy.readOnly ? 1 : 0, 0);
 	}
 }
