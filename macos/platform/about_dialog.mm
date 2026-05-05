@@ -154,7 +154,7 @@ void showAboutDlg()
 		[stack addArrangedSubview:disclaimerLabel];
 
 		NSTextField* productionLabel = makeCenteredLabel(
-			@"Produced and Directed by Brian Tabone, implemented by Codex, Claude, and Copilot",
+			@"Produced and Directed by Brian Tabone\nImplemented by Codex, Claude, and Copilot",
 			[NSFont systemFontOfSize:12],
 			[NSColor secondaryLabelColor],
 			contentWidth);
