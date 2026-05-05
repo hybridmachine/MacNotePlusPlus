@@ -51,9 +51,10 @@ void showAboutDlg()
 {
 	@autoreleasepool {
 		const CGFloat panelWidth = 480;
-		const CGFloat panelHeight = 440;
+		const CGFloat panelHeight = 640;
 		const CGFloat sideInset = 25;
 		const CGFloat contentWidth = panelWidth - (sideInset * 2);
+		const CGFloat aboutImageScale = 0.25;
 
 		NSPanel* panel = [[NSPanel alloc]
 			initWithContentRect:NSMakeRect(0, 0, panelWidth, panelHeight)
@@ -83,22 +84,35 @@ void showAboutDlg()
 			[[stack bottomAnchor] constraintLessThanOrEqualToAnchor:[contentView bottomAnchor] constant:-18]
 		]];
 
-		// App icon
-		NSImage* logo = [NSApp applicationIconImage];
-		if (!logo)
+		// About artwork. Adjust aboutImageScale above after visual review.
+		NSImage* aboutImage = nil;
+		NSString* aboutImagePath = [[NSBundle mainBundle] pathForResource:@"about" ofType:@"png"];
+		if (aboutImagePath)
+			aboutImage = [[NSImage alloc] initWithContentsOfFile:aboutImagePath];
+		if (!aboutImage)
 		{
 			NSString* dir = [[[NSBundle mainBundle] executablePath] stringByDeletingLastPathComponent];
-			logo = [[NSImage alloc] initWithContentsOfFile:[dir stringByAppendingPathComponent:@"logo.png"]];
+			aboutImage = [[NSImage alloc] initWithContentsOfFile:[dir stringByAppendingPathComponent:@"about.png"]];
 		}
-		if (logo)
+		if (aboutImage)
 		{
-			NSImageView* iconView = [[NSImageView alloc] init];
-			[iconView setImage:logo];
-			[iconView setImageScaling:NSImageScaleProportionallyUpOrDown];
-			[iconView setTranslatesAutoresizingMaskIntoConstraints:NO];
-			[[iconView widthAnchor] constraintEqualToConstant:72].active = YES;
-			[[iconView heightAnchor] constraintEqualToConstant:72].active = YES;
-			[stack addArrangedSubview:iconView];
+			NSSize imageSize = [aboutImage size];
+			CGFloat imageWidth = imageSize.width * aboutImageScale;
+			CGFloat imageHeight = imageSize.height * aboutImageScale;
+			if (imageWidth > contentWidth)
+			{
+				const CGFloat constrainedScale = contentWidth / imageWidth;
+				imageWidth *= constrainedScale;
+				imageHeight *= constrainedScale;
+			}
+
+			NSImageView* imageView = [[NSImageView alloc] init];
+			[imageView setImage:aboutImage];
+			[imageView setImageScaling:NSImageScaleProportionallyUpOrDown];
+			[imageView setTranslatesAutoresizingMaskIntoConstraints:NO];
+			[[imageView widthAnchor] constraintEqualToConstant:imageWidth].active = YES;
+			[[imageView heightAnchor] constraintEqualToConstant:imageHeight].active = YES;
+			[stack addArrangedSubview:imageView];
 		}
 
 		// App name

@@ -433,9 +433,12 @@ add_custom_command(TARGET PaperWasp POST_BUILD
         "${NPP_ROOT}/logo.png"
         "$<TARGET_FILE_DIR:PaperWasp>/logo.png"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${NPP_ROOT}/about.png"
+        "$<TARGET_FILE_DIR:PaperWasp>/about.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/AppIcon.icns"
         "$<TARGET_FILE_DIR:PaperWasp>/AppIcon.icns"
-    COMMENT "Copying logo.png and AppIcon.icns"
+    COMMENT "Copying logo.png, about.png, and AppIcon.icns"
 )
 
 # ============================================================
@@ -568,8 +571,14 @@ add_custom_target(PaperWasp_package
         "${NPP_ROOT}/logo.png"
         "${NPP_MACOS_APP_MACOS}/logo.png"
     COMMAND ditto --norsrc
+        "${NPP_ROOT}/about.png"
+        "${NPP_MACOS_APP_MACOS}/about.png"
+    COMMAND ditto --norsrc
         "${NPP_ROOT}/logo.png"
         "${NPP_MACOS_APP_RESOURCES}/logo.png"
+    COMMAND ditto --norsrc
+        "${NPP_ROOT}/about.png"
+        "${NPP_MACOS_APP_RESOURCES}/about.png"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/AppIcon.icns"
         "${NPP_MACOS_APP_RESOURCES}/AppIcon.icns"
