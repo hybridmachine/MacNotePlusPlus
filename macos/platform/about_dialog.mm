@@ -1,5 +1,5 @@
 // about_dialog.mm — About dialog
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "about_dialog.h"
@@ -12,7 +12,7 @@
 - (void)openRepository:(id)sender
 {
 	[[NSWorkspace sharedWorkspace] openURL:
-		[NSURL URLWithString:@"https://github.com/hybridmachine/MacNotePlusPlus"]];
+		[NSURL URLWithString:@"https://github.com/hybridmachine/PaperWasp"]];
 }
 
 - (void)windowWillClose:(NSNotification*)notification
@@ -21,15 +21,47 @@
 }
 @end
 
+static NSTextField* makeCenteredLabel(NSString* text, NSFont* font, NSColor* color, CGFloat maxWidth)
+{
+	NSTextField* label = [NSTextField wrappingLabelWithString:text];
+	[label setFont:font];
+	if (color)
+		[label setTextColor:color];
+	[label setAlignment:NSTextAlignmentCenter];
+	[label setLineBreakMode:NSLineBreakByWordWrapping];
+	[label setMaximumNumberOfLines:0];
+	[label setPreferredMaxLayoutWidth:maxWidth];
+	[label setTranslatesAutoresizingMaskIntoConstraints:NO];
+	[[label widthAnchor] constraintLessThanOrEqualToConstant:maxWidth].active = YES;
+	[label setContentCompressionResistancePriority:NSLayoutPriorityRequired
+	                                forOrientation:NSLayoutConstraintOrientationVertical];
+	return label;
+}
+
+static NSView* makeSpacer(CGFloat height)
+{
+	NSView* spacer = [[NSView alloc] init];
+	[spacer setTranslatesAutoresizingMaskIntoConstraints:NO];
+	[[spacer heightAnchor] constraintEqualToConstant:height].active = YES;
+	[[spacer widthAnchor] constraintEqualToConstant:1].active = YES;
+	return spacer;
+}
+
 void showAboutDlg()
 {
 	@autoreleasepool {
+		const CGFloat panelWidth = 480;
+		const CGFloat panelHeight = 640;
+		const CGFloat sideInset = 25;
+		const CGFloat contentWidth = panelWidth - (sideInset * 2);
+		const CGFloat aboutImageScale = 0.25;
+
 		NSPanel* panel = [[NSPanel alloc]
-			initWithContentRect:NSMakeRect(0, 0, 400, 360)
+			initWithContentRect:NSMakeRect(0, 0, panelWidth, panelHeight)
 			styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 			backing:NSBackingStoreBuffered
 			defer:NO];
-		[panel setTitle:@"About MacNote++"];
+		[panel setTitle:@"About PaperWasp"];
 		[panel center];
 		[panel setReleasedWhenClosed:NO];
 
@@ -37,90 +69,133 @@ void showAboutDlg()
 		AboutDialogController* controller = [[AboutDialogController alloc] init];
 
 		NSView* contentView = [panel contentView];
-		CGFloat y = 310;
 
-		// App icon
-		NSImage* logo = [NSApp applicationIconImage];
-		if (!logo)
+		NSStackView* stack = [[NSStackView alloc] init];
+		[stack setOrientation:NSUserInterfaceLayoutOrientationVertical];
+		[stack setAlignment:NSLayoutAttributeCenterX];
+		[stack setSpacing:7];
+		[stack setTranslatesAutoresizingMaskIntoConstraints:NO];
+		[contentView addSubview:stack];
+
+		[NSLayoutConstraint activateConstraints:@[
+			[[stack topAnchor] constraintEqualToAnchor:[contentView topAnchor] constant:28],
+			[[stack leadingAnchor] constraintEqualToAnchor:[contentView leadingAnchor] constant:sideInset],
+			[[stack trailingAnchor] constraintEqualToAnchor:[contentView trailingAnchor] constant:-sideInset],
+			[[stack bottomAnchor] constraintLessThanOrEqualToAnchor:[contentView bottomAnchor] constant:-18]
+		]];
+
+		// About artwork. Adjust aboutImageScale above after visual review.
+		NSImage* aboutImage = nil;
+		NSString* aboutImagePath = [[NSBundle mainBundle] pathForResource:@"about" ofType:@"png"];
+		if (aboutImagePath)
+			aboutImage = [[NSImage alloc] initWithContentsOfFile:aboutImagePath];
+		if (!aboutImage)
 		{
 			NSString* dir = [[[NSBundle mainBundle] executablePath] stringByDeletingLastPathComponent];
-			logo = [[NSImage alloc] initWithContentsOfFile:[dir stringByAppendingPathComponent:@"logo.png"]];
+			aboutImage = [[NSImage alloc] initWithContentsOfFile:[dir stringByAppendingPathComponent:@"about.png"]];
 		}
-		if (logo)
+		if (aboutImage)
 		{
-			NSImageView* iconView = [[NSImageView alloc] initWithFrame:NSMakeRect(168, y - 64, 64, 64)];
-			[iconView setImage:logo];
-			[iconView setImageScaling:NSImageScaleProportionallyUpOrDown];
-			[contentView addSubview:iconView];
+			NSSize imageSize = [aboutImage size];
+			CGFloat imageWidth = imageSize.width * aboutImageScale;
+			CGFloat imageHeight = imageSize.height * aboutImageScale;
+			if (imageWidth > contentWidth)
+			{
+				const CGFloat constrainedScale = contentWidth / imageWidth;
+				imageWidth *= constrainedScale;
+				imageHeight *= constrainedScale;
+			}
+
+			NSImageView* imageView = [[NSImageView alloc] init];
+			[imageView setImage:aboutImage];
+			[imageView setImageScaling:NSImageScaleProportionallyUpOrDown];
+			[imageView setTranslatesAutoresizingMaskIntoConstraints:NO];
+			[[imageView widthAnchor] constraintEqualToConstant:imageWidth].active = YES;
+			[[imageView heightAnchor] constraintEqualToConstant:imageHeight].active = YES;
+			[stack addArrangedSubview:imageView];
 		}
-		y -= 80;
 
 		// App name
-		NSTextField* nameLabel = [NSTextField labelWithString:@"MacNote++"];
-		[nameLabel setFont:[NSFont boldSystemFontOfSize:18]];
-		[nameLabel setAlignment:NSTextAlignmentCenter];
-		[nameLabel setFrame:NSMakeRect(20, y, 360, 24)];
-		[contentView addSubview:nameLabel];
-		y -= 22;
+		NSTextField* nameLabel = makeCenteredLabel(
+			@"PaperWasp",
+			[NSFont boldSystemFontOfSize:24],
+			[NSColor labelColor],
+			contentWidth);
+		[stack addArrangedSubview:nameLabel];
 
-		// Version — read from bundle at runtime
+		// Version - read from bundle at runtime
 		NSString* version = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
 		if (!version) version = @"1.0.0";
 		NSString* build = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
 		NSString* versionStr = build && ![build isEqualToString:version]
 			? [NSString stringWithFormat:@"Version %@ (%@)", version, build]
 			: [NSString stringWithFormat:@"Version %@", version];
-		NSTextField* versionLabel = [NSTextField labelWithString:versionStr];
-		[versionLabel setFont:[NSFont systemFontOfSize:13]];
-		[versionLabel setTextColor:[NSColor secondaryLabelColor]];
-		[versionLabel setAlignment:NSTextAlignmentCenter];
-		[versionLabel setFrame:NSMakeRect(20, y, 360, 18)];
-		[contentView addSubview:versionLabel];
-		y -= 28;
+		NSTextField* versionLabel = makeCenteredLabel(
+			versionStr,
+			[NSFont systemFontOfSize:15],
+			[NSColor secondaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:versionLabel];
+		[stack setCustomSpacing:18 afterView:versionLabel];
 
 		// Attribution
-		NSTextField* creditLabel = [NSTextField labelWithString:@"Based on Notepad++ by Don Ho"];
-		[creditLabel setFont:[NSFont systemFontOfSize:13]];
-		[creditLabel setAlignment:NSTextAlignmentCenter];
-		[creditLabel setFrame:NSMakeRect(20, y, 360, 18)];
-		[contentView addSubview:creditLabel];
-		y -= 30;
+		NSTextField* creditLabel = makeCenteredLabel(
+			@"Based on Notepad++ by Don Ho and the Notepad++ contributors",
+			[NSFont systemFontOfSize:13],
+			[NSColor labelColor],
+			contentWidth);
+		[stack addArrangedSubview:creditLabel];
+
+		NSTextField* disclaimerLabel = makeCenteredLabel(
+			@"PaperWasp is independent and is not endorsed by the creators of Notepad++.",
+			[NSFont systemFontOfSize:12],
+			[NSColor secondaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:disclaimerLabel];
+
+		NSTextField* productionLabel = makeCenteredLabel(
+			@"Produced and Directed by Brian Tabone\nImplemented by Codex, Claude, and Copilot",
+			[NSFont systemFontOfSize:12],
+			[NSColor secondaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:productionLabel];
+		[stack setCustomSpacing:20 afterView:productionLabel];
 
 		// Separator
-		NSBox* separator = [[NSBox alloc] initWithFrame:NSMakeRect(40, y, 320, 1)];
+		NSBox* separator = [[NSBox alloc] init];
 		[separator setBoxType:NSBoxSeparator];
-		[contentView addSubview:separator];
-		y -= 24;
+		[separator setTranslatesAutoresizingMaskIntoConstraints:NO];
+		[[separator widthAnchor] constraintEqualToConstant:contentWidth].active = YES;
+		[stack addArrangedSubview:separator];
+		[stack setCustomSpacing:16 afterView:separator];
 
 		// Component versions
-		NSTextField* compLabel = [NSTextField labelWithString:
-			@"Scintilla 5.5.3  \u2022  Lexilla 5.4.0  \u2022  Boost.Regex 1.90.0"];
-		[compLabel setFont:[NSFont systemFontOfSize:11]];
-		[compLabel setTextColor:[NSColor tertiaryLabelColor]];
-		[compLabel setAlignment:NSTextAlignmentCenter];
-		[compLabel setFrame:NSMakeRect(20, y, 360, 16)];
-		[contentView addSubview:compLabel];
-		y -= 22;
+		NSTextField* compLabel = makeCenteredLabel(
+			@"Scintilla 5.5.3  \u2022  Lexilla 5.4.0  \u2022  Boost.Regex 1.90.0",
+			[NSFont systemFontOfSize:11],
+			[NSColor tertiaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:compLabel];
 
 		// Build date
 		NSString* buildDate = [NSString stringWithFormat:@"Built: %s", __DATE__];
-		NSTextField* buildLabel = [NSTextField labelWithString:buildDate];
-		[buildLabel setFont:[NSFont systemFontOfSize:11]];
-		[buildLabel setTextColor:[NSColor tertiaryLabelColor]];
-		[buildLabel setAlignment:NSTextAlignmentCenter];
-		[buildLabel setFrame:NSMakeRect(20, y, 360, 16)];
-		[contentView addSubview:buildLabel];
-		y -= 28;
+		NSTextField* buildLabel = makeCenteredLabel(
+			buildDate,
+			[NSFont systemFontOfSize:11],
+			[NSColor tertiaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:buildLabel];
+		[stack setCustomSpacing:12 afterView:buildLabel];
 
 		// Repository link (clickable button styled as link)
-		NSButton* linkButton = [[NSButton alloc] initWithFrame:NSMakeRect(60, y, 280, 20)];
-		[linkButton setTitle:@"github.com/hybridmachine/MacNotePlusPlus"];
+		NSButton* linkButton = [[NSButton alloc] init];
+		[linkButton setTitle:@"github.com/hybridmachine/PaperWasp"];
 		[linkButton setBezelStyle:NSBezelStyleInline];
 		[linkButton setBordered:NO];
 		[linkButton setTarget:controller];
 		[linkButton setAction:@selector(openRepository:)];
 		NSMutableAttributedString* linkAttr = [[NSMutableAttributedString alloc]
-			initWithString:@"github.com/hybridmachine/MacNotePlusPlus"];
+			initWithString:@"github.com/hybridmachine/PaperWasp"];
 		[linkAttr addAttribute:NSForegroundColorAttributeName
 		                 value:[NSColor linkColor]
 		                 range:NSMakeRange(0, linkAttr.length)];
@@ -132,25 +207,30 @@ void showAboutDlg()
 		                 range:NSMakeRange(0, linkAttr.length)];
 		[linkButton setAttributedTitle:linkAttr];
 		[linkButton setAlignment:NSTextAlignmentCenter];
-		[contentView addSubview:linkButton];
-		y -= 24;
+		[linkButton setTranslatesAutoresizingMaskIntoConstraints:NO];
+		[[linkButton widthAnchor] constraintLessThanOrEqualToConstant:contentWidth].active = YES;
+		[stack addArrangedSubview:linkButton];
 
 		// License
-		NSTextField* licenseLabel = [NSTextField labelWithString:@"GNU General Public License v3"];
-		[licenseLabel setFont:[NSFont systemFontOfSize:11]];
-		[licenseLabel setTextColor:[NSColor secondaryLabelColor]];
-		[licenseLabel setAlignment:NSTextAlignmentCenter];
-		[licenseLabel setFrame:NSMakeRect(20, y, 360, 16)];
-		[contentView addSubview:licenseLabel];
+		NSTextField* licenseLabel = makeCenteredLabel(
+			@"GNU General Public License v3",
+			[NSFont systemFontOfSize:11],
+			[NSColor secondaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:licenseLabel];
+		[stack addArrangedSubview:makeSpacer(6)];
 
 		// OK button
-		NSButton* okButton = [[NSButton alloc] initWithFrame:NSMakeRect(160, 12, 80, 32)];
+		NSButton* okButton = [[NSButton alloc] init];
 		[okButton setTitle:@"OK"];
 		[okButton setBezelStyle:NSBezelStyleRounded];
 		[okButton setTarget:NSApp];
 		[okButton setAction:@selector(stopModal)];
 		[okButton setKeyEquivalent:@"\r"];
-		[contentView addSubview:okButton];
+		[okButton setTranslatesAutoresizingMaskIntoConstraints:NO];
+		[[okButton widthAnchor] constraintEqualToConstant:92].active = YES;
+		[[okButton heightAnchor] constraintEqualToConstant:32].active = YES;
+		[stack addArrangedSubview:okButton];
 
 		// Escape triggers the panel's close, which calls windowWillClose: → stopModal
 		[panel setDefaultButtonCell:[okButton cell]];

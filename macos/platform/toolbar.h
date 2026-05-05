@@ -1,5 +1,5 @@
 // toolbar.h — NSToolbar with SF Symbols
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

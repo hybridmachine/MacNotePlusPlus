@@ -1,5 +1,5 @@
-// Settings Manager for Notepad++ macOS Port
-// Persists user settings to ~/.npp-macos/settings.json using NSJSONSerialization.
+// Settings Manager for PaperWasp
+// Persists user settings to ~/Library/Application Support/PaperWasp/settings.json.
 
 #import <Foundation/Foundation.h>
 #include "settings_manager.h"
@@ -25,7 +25,8 @@ SettingsManager& SettingsManager::instance()
 std::string SettingsManager::settingsDir() const
 {
 	NSString* home = NSHomeDirectory();
-	NSString* dir = [home stringByAppendingPathComponent:@".npp-macos"];
+	NSString* dir = [[home stringByAppendingPathComponent:@"Library/Application Support"]
+		stringByAppendingPathComponent:@"PaperWasp"];
 	const char* fs = [dir fileSystemRepresentation];
 	if (!fs) return "";
 	return std::string(fs);

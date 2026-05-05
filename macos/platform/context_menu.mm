@@ -1,5 +1,5 @@
 // context_menu.mm — Context menu
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "context_menu.h"
 #include "npp_constants.h"

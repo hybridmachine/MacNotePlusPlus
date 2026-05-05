@@ -1,5 +1,5 @@
 // plugin_manager.h — macOS plugin loading and management
-// Source-code-compatible plugin system for MacNote++.
+// Source-code-compatible plugin system for PaperWasp.
 // Loads .dylib plugins using the same PluginInterface.h contract as Notepad++.
 
 #pragma once

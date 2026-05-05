@@ -1,5 +1,5 @@
 // app_delegate.h — Application delegate and lifecycle
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

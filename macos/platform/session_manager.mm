@@ -1,5 +1,5 @@
 // session_manager.mm — Session save/restore
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "session_manager.h"
@@ -17,12 +17,15 @@
 std::string sessionPath()
 {
 	NSString* home = NSHomeDirectory();
-	return std::string([home UTF8String]) + "/.npp-macos/session.json";
+	NSString* dir = [[home stringByAppendingPathComponent:@"Library/Application Support"]
+		stringByAppendingPathComponent:@"PaperWasp"];
+	return std::string([dir fileSystemRepresentation]) + "/session.json";
 }
 
 void saveSession()
 {
-	NSString* dir = [NSString stringWithFormat:@"%@/.npp-macos", NSHomeDirectory()];
+	NSString* dir = [[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"]
+		stringByAppendingPathComponent:@"PaperWasp"];
 	[[NSFileManager defaultManager] createDirectoryAtPath:dir
 	                          withIntermediateDirectories:YES attributes:nil error:nil];
 

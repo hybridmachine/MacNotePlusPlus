@@ -1,5 +1,5 @@
 // tab_bar_view.mm — Custom tab bar view with close buttons and drag-to-reorder
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #import "tab_bar_view.h"
 

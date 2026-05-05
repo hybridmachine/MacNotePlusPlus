@@ -1,5 +1,5 @@
 // find_replace.h — Find/Replace dialog and search logic
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

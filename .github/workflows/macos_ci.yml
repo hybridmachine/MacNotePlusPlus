@@ -68,41 +68,41 @@ jobs:
         working-directory: macos/build
         run: cmake -G Xcode ..
 
-      - name: Build MacNotePlusPlus (Release)
+      - name: Build PaperWasp (Release)
         working-directory: macos/build
-        run: cmake --build . --target MacNotePlusPlus --config Release -- -quiet
+        run: cmake --build . --target PaperWasp --config Release -- -quiet
 
-      - name: Build MacNotePlusPlus (Debug)
+      - name: Build PaperWasp (Debug)
         working-directory: macos/build
-        run: cmake --build . --target MacNotePlusPlus --config Debug -- -quiet
+        run: cmake --build . --target PaperWasp --config Debug -- -quiet
 
       - name: Build app bundle (package)
         working-directory: macos/build
-        run: cmake --build . --target MacNotePlusPlus_package --config Release
+        run: cmake --build . --target PaperWasp_package --config Release
 
       - name: Verify app bundle
         run: |
           echo "=== App bundle structure ==="
-          ls -lR macos/dist/MacNote++.app/Contents/ | head -30
+          ls -lR macos/dist/PaperWasp.app/Contents/ | head -30
           echo ""
           echo "=== Binary info ==="
-          file macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus
+          file macos/dist/PaperWasp.app/Contents/MacOS/PaperWasp
           echo ""
           echo "=== Linked frameworks ==="
-          otool -L macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus | head -20
+          otool -L macos/dist/PaperWasp.app/Contents/MacOS/PaperWasp | head -20
 
       - name: Upload app bundle artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MacNote++.app-${{ matrix.runner }}-${{ matrix.arch }}
-          path: macos/dist/MacNote++.app
+          name: PaperWasp.app-${{ matrix.runner }}-${{ matrix.arch }}
+          path: macos/dist/PaperWasp.app
           retention-days: 14
 
       - name: Upload Release binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MacNotePlusPlus-Release-${{ matrix.runner }}-${{ matrix.arch }}
-          path: macos/build/Release/MacNotePlusPlus
+          name: PaperWasp-Release-${{ matrix.runner }}-${{ matrix.arch }}
+          path: macos/build/Release/PaperWasp
           retention-days: 14
 
   sign_and_notarize:
@@ -145,12 +145,12 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         uses: actions/download-artifact@v4
         with:
-          name: MacNote++.app-macos-15-arm64
+          name: PaperWasp.app-macos-15-arm64
           path: macos/dist
 
       - name: Restore executable permission
         if: steps.check_secrets.outputs.skip != 'true'
-        run: chmod +x macos/dist/MacNote++.app/Contents/MacOS/MacNotePlusPlus
+        run: chmod +x macos/dist/PaperWasp.app/Contents/MacOS/PaperWasp
 
       - name: Import code signing certificate
         if: steps.check_secrets.outputs.skip != 'true'
@@ -185,17 +185,17 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         run: |
           mkdir -p macos/dist/dmg-root
-          rm -rf macos/dist/dmg-root/MacNote++.app
-          cp -R macos/dist/MacNote++.app macos/dist/dmg-root/MacNote++.app
+          rm -rf macos/dist/dmg-root/PaperWasp.app
+          cp -R macos/dist/PaperWasp.app macos/dist/dmg-root/PaperWasp.app
           rm -f macos/dist/dmg-root/Applications
           ln -s /Applications macos/dist/dmg-root/Applications
-          rm -f macos/dist/MacNote++-unsigned.dmg
+          rm -f macos/dist/PaperWasp-unsigned.dmg
           hdiutil create \
-            -volname "MacNote++" \
+            -volname "PaperWasp" \
             -srcfolder macos/dist/dmg-root \
             -format UDZO \
             -ov \
-            macos/dist/MacNote++-unsigned.dmg
+            macos/dist/PaperWasp-unsigned.dmg
 
       - name: Sign and notarize
         if: steps.check_secrets.outputs.skip != 'true'
@@ -212,16 +212,16 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: MacNote++.dmg-signed-arm64
-          path: macos/dist/MacNote++.dmg
+          name: PaperWasp.dmg-signed-arm64
+          path: macos/dist/PaperWasp.dmg
           retention-days: 30
 
       - name: Upload signed app bundle
         if: steps.check_secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: MacNote++.app-signed-arm64
-          path: macos/dist/MacNote++.app
+          name: PaperWasp.app-signed-arm64
+          path: macos/dist/PaperWasp.app
           retention-days: 30
 
       - name: Cleanup keychain

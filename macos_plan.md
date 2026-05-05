@@ -1,8 +1,8 @@
-# Notepad++ macOS Port via Win32 Shim Layer
+# PaperWasp macOS Port via Win32 Shim Layer
 
 ## Context
 
-Notepad++ is a Windows-only C++ text editor deeply coupled to Win32 APIs (~291 distinct functions, ~4,100+ call sites across 284 files). The user wants to build it for macOS by creating a compatibility shim that translates Win32 calls to Cocoa/AppKit/CoreGraphics equivalents, keeping the existing source code largely unmodified.
+PaperWasp is based on Notepad++, a Windows-only C++ text editor deeply coupled to Win32 APIs (~291 distinct functions, ~4,100+ call sites across 284 files). The port uses a compatibility shim that translates Win32 calls to Cocoa/AppKit/CoreGraphics equivalents, keeping the existing source code largely unmodified.
 
 **Key insight**: The vendored Scintilla already has **complete macOS/Cocoa support** (`scintilla/cocoa/`) with Xcode projects, and Lexilla is fully platform-independent. The editor core is already portable — the challenge is the application shell and UI layer.
 

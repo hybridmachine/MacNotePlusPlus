@@ -86,7 +86,7 @@ static void testAPIs()
 int main(int argc, const char* argv[])
 {
 	@autoreleasepool {
-		NSLog(@"=== Notepad++ macOS Port - Phase 0 Build Test ===");
+		NSLog(@"=== PaperWasp macOS Port - Phase 0 Build Test ===");
 
 		testTypes();
 		NSLog(@"  Win32 types: OK");

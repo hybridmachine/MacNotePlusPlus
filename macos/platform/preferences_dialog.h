@@ -1,5 +1,5 @@
 // preferences_dialog.h — Preferences dialog
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

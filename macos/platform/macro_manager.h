@@ -1,5 +1,5 @@
 // macro_manager.h — Macro recording, playback, and persistence
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 #include <string>

@@ -1,5 +1,5 @@
 // preferences_dialog.mm — Preferences dialog
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "preferences_dialog.h"

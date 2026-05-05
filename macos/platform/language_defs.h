@@ -1,5 +1,5 @@
 // language_defs.h — Language definitions and extension-based detection
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

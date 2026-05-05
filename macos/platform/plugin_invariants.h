@@ -1,5 +1,5 @@
 // plugin_invariants.h — launch-time and NPPN_READY assertions.
-// Output is gated behind MACNOTE_PLUGIN_DEBUG=1 env var.
+// Output is gated behind PAPERWASP_PLUGIN_DEBUG=1 env var.
 
 #pragma once
 

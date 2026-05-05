@@ -71,7 +71,7 @@ static int toNppEncoding(int encoding)
 	{
 		case ENC_ANSI:     return 0;
 		case ENC_UTF8_BOM: return 1;
-		// MacNote++ currently saves UTF-16 without a BOM; Notepad++ UniMode
+		// PaperWasp currently saves UTF-16 without a BOM; Notepad++ UniMode
 		// values 6/7 represent UTF-16 BE/LE without BOM.
 		case ENC_UTF16_BE: return 6;
 		case ENC_UTF16_LE: return 7;
@@ -174,7 +174,7 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case NPPM_GETPLUGINSCONFIGDIR:
 		{
 			@autoreleasepool {
-				NSString* configDir = [@"~/Library/Application Support/MacNote++/plugins/Config"
+				NSString* configDir = [@"~/Library/Application Support/PaperWasp/plugins/Config"
 					stringByExpandingTildeInPath];
 				[[NSFileManager defaultManager] createDirectoryAtPath:configDir
 					withIntermediateDirectories:YES attributes:nil error:nil];
@@ -196,7 +196,7 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case NPPM_GETNPPVERSION:
 		{
 			// Plugins use this to gate feature-availability checks, not to
-			// discover our product version. Reporting MacNote++ 1.0 made
+			// discover our product version. Reporting PaperWasp 1.0 made
 			// ComparePlus refuse to run (it requires Notepad++ >= 8.420).
 			// Report a recent Notepad++ version whose NPPM surface we emulate
 			// — 8.8.0 is past every version-gated path in vendored plugins
@@ -416,7 +416,7 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return 0;
 
 		case NPPM_GETCURRENTCMDLINE:
-			// MacNote++ launches through Cocoa document-open events rather
+			// PaperWasp launches through Cocoa document-open events rather
 			// than Notepad++'s Windows command-line parser. Report an empty
 			// command line so plugins such as ComparePlus can safely skip
 			// optional startup commands without logging an unhandled NPPM.

@@ -1,5 +1,5 @@
 // smart_highlight.mm — Smart highlighting (mark all occurrences)
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #include "smart_highlight.h"
 #include "npp_constants.h"

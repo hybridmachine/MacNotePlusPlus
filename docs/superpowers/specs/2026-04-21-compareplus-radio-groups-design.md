@@ -162,7 +162,7 @@ ID, independent of grouping.
 No automated UI tests exist for shim dialogs. Manual verification on
 macOS Debug build:
 
-1. Build: `cd macos/build && cmake --build . --target MacNotePlusPlus`.
+1. Build: `cd macos/build && cmake --build . --target PaperWasp`.
 2. Open the app, load two files, open **Plugins → ComparePlus →
    Settings**.
 3. Click each radio in each of the four groups. Assert:

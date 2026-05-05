@@ -1,5 +1,5 @@
 // edit_commands.mm — Edit menu commands (case, line ops, comments, sort, join)
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Foundation/Foundation.h>
 #include "edit_commands.h"

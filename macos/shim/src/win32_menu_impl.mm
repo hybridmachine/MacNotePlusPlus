@@ -388,11 +388,15 @@ BOOL SetMenu(HWND hWnd, HMENU hMenu)
 
 	// Add application menu (About, Quit)
 	NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
-	NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"Notepad++"];
+	NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"PaperWasp"];
 	appMenu.delegate = [Win32MenuDelegate shared];
-	[appMenu addItemWithTitle:@"About Notepad++" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+	NSMenuItem* aboutItem = [appMenu addItemWithTitle:@"About PaperWasp"
+	                                          action:@selector(menuItemClicked:)
+	                                   keyEquivalent:@""];
+	[aboutItem setTarget:[Win32MenuTarget shared]];
+	[aboutItem setTag:IDM_HELP_ABOUT];
 	[appMenu addItem:[NSMenuItem separatorItem]];
-	NSMenuItem* quitItem = [appMenu addItemWithTitle:@"Quit Notepad++" action:@selector(terminate:) keyEquivalent:@"q"];
+	NSMenuItem* quitItem = [appMenu addItemWithTitle:@"Quit PaperWasp" action:@selector(terminate:) keyEquivalent:@"q"];
 	(void)quitItem;
 	appMenuItem.submenu = appMenu;
 	[mainMenu addItem:appMenuItem];

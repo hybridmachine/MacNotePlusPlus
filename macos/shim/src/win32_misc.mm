@@ -241,7 +241,7 @@ DWORD FormatMessageW(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId,
 // ============================================================
 // GetCommandLine
 // ============================================================
-static WCHAR s_commandLine[MAX_PATH * 4] = L"notepad++.exe";
+static WCHAR s_commandLine[MAX_PATH * 4] = L"PaperWasp";
 
 LPWSTR GetCommandLineW()
 {

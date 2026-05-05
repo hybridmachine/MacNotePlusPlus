@@ -1,5 +1,5 @@
 // hash_tools.mm — Hash tools (MD5, SHA-1, SHA-256, SHA-512)
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 //
 // Hashes the current selection if non-empty, otherwise the entire document.
 // Shows result in a modal NSPanel with Copy / Insert at Cursor / Close buttons.

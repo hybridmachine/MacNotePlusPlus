@@ -1,5 +1,5 @@
 // appearance.mm — Dark/light mode, theme switching
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "appearance.h"

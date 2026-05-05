@@ -16,33 +16,32 @@ body:
       required: true
 - type: checkboxes
   attributes:
-    label: Is the issue reproducible in Notepad++ without plugin?
+    label: Is the issue reproducible in PaperWasp without plugins?
     description: |
-      If feasible, try launching Notepad++ without any plugins.
-      Some updates to Notepad++ modify communication rules used by plugins,
+      If feasible, try launching PaperWasp without any plugins.
+      Some updates to PaperWasp modify communication rules used by plugins,
       and if plugin developers do not keep their plugins in sync with these changes, issues may arise.
       Running without plugins can help diagnose specific problems.
-      You can use cmdline `notepad++.exe -noPlugin`
-      or rename your plugin folder, usually "C:\Program Files\Notepad++\plugins\" to e.g. "...\plugins.bak\").
+      You can temporarily move your user plugin folder, usually `~/Library/Application Support/PaperWasp/plugins`.
     options:
-    - label: I have tried Notepad++ without plugin
+    - label: I have tried PaperWasp without plugins
       required: false
 - type: checkboxes
   attributes:
-    label: Is the issue reproducible in portable version of Notepad++?
+    label: Is the issue reproducible with a clean PaperWasp configuration?
     description: |
-      If feasible, try launching portable version of Notepad++.
-      It can help to diagnose if specific configuration is causing issue.
+      If feasible, try launching PaperWasp with a clean user configuration.
+      It can help diagnose whether a specific configuration is causing the issue.
     options:
-    - label: I have tried portable version of Notepad++
+    - label: I have tried a clean PaperWasp configuration
       required: false
 - type: checkboxes
   attributes:
     label: Does the issue affect SciTE?
     description: |
-      Notepad++ relies on the Lexilla and Scintilla libraries.
+      PaperWasp relies on the Lexilla and Scintilla libraries.
       For more details, visit https://github.com/ScintillaOrg/lexilla and https://sourceforge.net/p/scintilla.
-      Consider using the reference program SciTE to verify whether the issue is a genuine bug in Notepad++.
+      Consider using the reference program SciTE to verify whether the issue is in the shared editor/lexer stack.
       Download Scite from here https://www.scintilla.org/SciTEDownload.html.
     options:
     - label: I have tried SciTE
@@ -84,9 +83,9 @@ body:
   attributes:
     label: Debug Information
     description: |
-      In your Notepad++, click on the "?" menu (found to the right of "Window" in the menu bar).
+      In PaperWasp, click on the "?" menu (found to the right of "Window" in the menu bar).
       In the menu that drops down, choose "Debug Info...".
-      A dialog will open detailing specifics about your Notepad++ version, plugins, etc.
+      A dialog will open detailing specifics about your PaperWasp version, plugins, etc.
       CLICK ON THE BUTTON "Copy debug info into clipboard".
       Do a PASTE HERE
     render: shell

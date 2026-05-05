@@ -1,5 +1,5 @@
 // file_operations.h — File I/O, encoding detection, open/save
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

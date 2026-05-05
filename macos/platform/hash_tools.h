@@ -1,5 +1,5 @@
 // hash_tools.h — Hash tool declarations (MD5, SHA-1, SHA-256, SHA-512)
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

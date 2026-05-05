@@ -1,5 +1,5 @@
 // split_view.mm — Split view management
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "split_view.h"
@@ -505,7 +505,7 @@ void doUnsplit()
 	if (ctx().activeTab >= 0 && ctx().activeTab < static_cast<int>(ctx().documents.size()))
 	{
 		NSString* title = WideToNSString(ctx().documents[ctx().activeTab].title.c_str());
-		[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", title]];
+		[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", title]];
 	}
 	updateWindowDocumentEdited();
 

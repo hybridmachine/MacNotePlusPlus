@@ -5,17 +5,17 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleExecutable</key>
-  <string>MacNotePlusPlus</string>
+  <string>@PAPERWASP_APP_NAME@</string>
   <key>CFBundleIdentifier</key>
-  <string>com.softcentral.macnotepp</string>
+  <string>@PAPERWASP_BUNDLE_IDENTIFIER@</string>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>MacNote++</string>
+  <string>@PAPERWASP_APP_NAME@</string>
   <key>CFBundleDisplayName</key>
-  <string>MacNote++</string>
+  <string>@PAPERWASP_APP_NAME@</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -25,7 +25,7 @@
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © 2024-2026. Based on Notepad++ by Don Ho.</string>
+  <string>Copyright © 2024-2026. PaperWasp is based on Notepad++ by Don Ho and the Notepad++ contributors. PaperWasp is independent and is not endorsed by the creators of Notepad++.</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
   <key>LSApplicationCategoryType</key>

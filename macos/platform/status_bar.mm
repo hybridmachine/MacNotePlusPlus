@@ -1,5 +1,5 @@
 // status_bar.mm — Status bar update
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "status_bar.h"
 #include "npp_constants.h"

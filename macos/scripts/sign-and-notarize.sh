@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# sign-and-notarize.sh -- Sign and notarize MacNote++.app and produce a signed DMG
+# sign-and-notarize.sh -- Sign and notarize PaperWasp.app and produce a signed DMG
 #
 # This script performs inside-out signing: every nested Mach-O (plugin dylibs,
 # frameworks) is signed before the outer bundle, then a fresh DMG is built from
@@ -18,10 +18,10 @@
 #   API key auth:   APPLE_API_KEY + APPLE_API_ISSUER (+ optional APPLE_API_KEY_PATH)
 #
 # Options:
-#   --app-path PATH      Path to .app bundle (default: macos/dist/MacNote++.app)
-#   --dmg-output PATH    Output path for signed DMG (default: macos/dist/MacNotePlusPlus.dmg)
-#   --volname NAME       DMG volume name (default: MacNotePlusPlus)
-#   --entitlements PATH  Path to entitlements (default: macos/platform/MacNote.entitlements)
+#   --app-path PATH      Path to .app bundle (default: macos/dist/PaperWasp.app)
+#   --dmg-output PATH    Output path for signed DMG (default: macos/dist/PaperWasp.dmg)
+#   --volname NAME       DMG volume name (default: PaperWasp)
+#   --entitlements PATH  Path to entitlements (default: macos/platform/PaperWasp.entitlements)
 #   --skip-notarize      Only sign, do not submit for notarization
 #   --skip-dmg           Only sign/notarize the .app (no DMG produced)
 #   --verbose            Enable verbose output
@@ -34,10 +34,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MACOS_DIR="$REPO_ROOT/macos"
 
 # Defaults
-APP_PATH="${MACOS_DIR}/dist/MacNote++.app"
-DMG_OUTPUT="${MACOS_DIR}/dist/MacNotePlusPlus.dmg"
-DMG_VOLNAME="MacNotePlusPlus"
-ENTITLEMENTS="${MACOS_DIR}/platform/MacNote.entitlements"
+APP_PATH="${MACOS_DIR}/dist/PaperWasp.app"
+DMG_OUTPUT="${MACOS_DIR}/dist/PaperWasp.dmg"
+DMG_VOLNAME="PaperWasp"
+ENTITLEMENTS="${MACOS_DIR}/platform/PaperWasp.entitlements"
 SKIP_NOTARIZE=false
 SKIP_DMG=false
 VERBOSE=false
@@ -141,7 +141,7 @@ spctl --assess --type execute --verbose=2 "$APP_PATH" 2>&1 || \
 
 DMG_PATH=""
 if ! $SKIP_DMG; then
-	STAGE_ROOT="$(mktemp -d -t macnotepp-sign)"
+	STAGE_ROOT="$(mktemp -d -t paperwasp-sign)"
 	STAGE_DMG_ROOT="$STAGE_ROOT/dmg-root"
 	trap 'rm -rf "$STAGE_ROOT"' EXIT
 
@@ -178,7 +178,7 @@ if ! $SKIP_NOTARIZE; then
 		NOTARIZE_TARGET="$DMG_PATH"
 		CLEANUP_NOTARIZE_TARGET=false
 	else
-		NOTARIZE_TARGET="$(mktemp -t macnotepp-notarize).zip"
+		NOTARIZE_TARGET="$(mktemp -t paperwasp-notarize).zip"
 		log "Creating zip for notarization: $NOTARIZE_TARGET"
 		ditto -c -k --keepParent "$APP_PATH" "$NOTARIZE_TARGET"
 		CLEANUP_NOTARIZE_TARGET=true

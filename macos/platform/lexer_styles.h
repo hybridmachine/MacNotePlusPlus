@@ -1,5 +1,5 @@
 // lexer_styles.h — Per-lexer style tables and language switching
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

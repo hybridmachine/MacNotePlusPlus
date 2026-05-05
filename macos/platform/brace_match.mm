@@ -1,5 +1,5 @@
 // brace_match.mm — Brace matching and highlighting
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "brace_match.h"
 #include "npp_constants.h"

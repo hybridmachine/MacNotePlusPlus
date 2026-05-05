@@ -1,5 +1,5 @@
 // npp_constants.h — Command IDs, SCI message enum, Scintilla constants
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 
@@ -465,7 +465,7 @@ enum {
 #define SC_UPDATE_V_SCROLL   0x4
 #define SC_UPDATE_H_SCROLL   0x8
 
-// Indicator allocation table for MacNotePP:
+// Indicator allocation table for PaperWasp:
 // 0-7:  Reserved by Scintilla lexers
 // 8-20: Reserved for plugins
 // 28:   INDIC_INCREMENTAL_SEARCH (P1-03)
