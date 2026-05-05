@@ -1,5 +1,5 @@
 // recent_files.h — Recent files list management
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

@@ -11,7 +11,7 @@
 #include <cstdio>
 static FILE* dbgLog()
 {
-	static FILE* f = fopen("/tmp/MacNotePP.log", "a");
+	static FILE* f = fopen("/tmp/PaperWasp.log", "a");
 	return f;
 }
 #define FLLOG(fmt, ...) do { if (FILE* _f = dbgLog()) { fprintf(_f, "[FLParser] " fmt "\n", ##__VA_ARGS__); fflush(_f); } } while(0)

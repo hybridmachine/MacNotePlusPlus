@@ -1,5 +1,5 @@
 // scintilla_config.mm — Scintilla editor configuration
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "scintilla_config.h"
 #include "npp_constants.h"

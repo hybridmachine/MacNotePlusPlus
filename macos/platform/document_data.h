@@ -1,5 +1,5 @@
 // document_data.h — Per-tab document state, encoding types
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

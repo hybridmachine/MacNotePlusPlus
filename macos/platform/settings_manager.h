@@ -1,6 +1,6 @@
 #pragma once
-// Settings Manager for Notepad++ macOS Port
-// Reads/writes settings to ~/.npp-macos/settings.json using NSJSONSerialization.
+// Settings Manager for PaperWasp
+// Reads/writes settings to ~/Library/Application Support/PaperWasp/settings.json.
 
 #include <string>
 #include <vector>
@@ -51,11 +51,11 @@ class SettingsManager
 public:
 	static SettingsManager& instance();
 
-	// Load settings from ~/.npp-macos/settings.json
+	// Load settings from ~/Library/Application Support/PaperWasp/settings.json
 	// Returns true if file was found and parsed successfully.
 	bool load();
 
-	// Save current settings to ~/.npp-macos/settings.json
+	// Save current settings to ~/Library/Application Support/PaperWasp/settings.json
 	bool save();
 
 	AppSettings settings;

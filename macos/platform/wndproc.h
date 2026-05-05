@@ -1,5 +1,5 @@
 // wndproc.h — Main window procedure (command dispatch)
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

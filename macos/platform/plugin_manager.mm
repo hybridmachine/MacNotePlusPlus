@@ -1,6 +1,6 @@
 // plugin_manager.mm — macOS plugin loading and management
 // Loads .dylib plugins from the app bundle's Contents/PlugIns/ (bundled defaults)
-// and ~/Library/Application Support/MacNote++/plugins/ (user-installed).
+// and ~/Library/Application Support/PaperWasp/plugins/ (user-installed).
 
 #import <Cocoa/Cocoa.h>
 #include "plugin_manager.h"
@@ -359,7 +359,7 @@ bool MacPluginManager::loadPlugins()
 		// Scan the user plugins directory first, then the bundled PlugIns
 		// directory. A user-installed plugin with the same folder name as a
 		// bundled one wins (lets users override a shipped default).
-		NSString* userDir = [@"~/Library/Application Support/MacNote++/plugins"
+		NSString* userDir = [@"~/Library/Application Support/PaperWasp/plugins"
 			stringByExpandingTildeInPath];
 		[fm createDirectoryAtPath:userDir withIntermediateDirectories:YES attributes:nil error:nil];
 

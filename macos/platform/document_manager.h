@@ -1,5 +1,5 @@
 // document_manager.h — Tab/document management, state save/restore
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

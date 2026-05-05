@@ -208,7 +208,7 @@ Expected: all five found in `plugins/comparePlus/src/NppAPI/Notepad_plus_msgs.h`
 - [ ] **Step 7: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 cmake --build macos/build --target ComparePlus
 cmake --build macos/build --target install_compare_plus
 ```
@@ -251,7 +251,7 @@ Catch regressions where the plugin initialization order or the second-view lifec
 
 ```objc
 // plugin_invariants.h — launch-time and NPPN_READY assertions.
-// Output is gated behind MACNOTE_PLUGIN_DEBUG=1 env var.
+// Output is gated behind PAPERWASP_PLUGIN_DEBUG=1 env var.
 
 #pragma once
 
@@ -278,7 +278,7 @@ static bool debugEnabled()
     static int cached = -1;
     if (cached < 0)
     {
-        const char* v = getenv("MACNOTE_PLUGIN_DEBUG");
+        const char* v = getenv("PAPERWASP_PLUGIN_DEBUG");
         cached = (v && v[0] == '1') ? 1 : 0;
     }
     return cached == 1;
@@ -340,8 +340,8 @@ Add `"${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_invariants.mm"` to the `platfo
 - [ ] **Step 5: Build and verify debug output**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
-MACNOTE_PLUGIN_DEBUG=1 ./macos/build/Debug/MacNotePlusPlus 2>&1 | grep plugin-invariants
+cmake --build macos/build --target PaperWasp
+PAPERWASP_PLUGIN_DEBUG=1 ./macos/build/Debug/PaperWasp 2>&1 | grep plugin-invariants
 ```
 
 Expected: two lines logged, one pre-init with non-null pointers, one post-ready with a non-null pluginsMenu.
@@ -357,7 +357,7 @@ git commit -m "$(cat <<'EOF'
 feat: add plugin-init invariants and post-NPPN_READY diagnostics
 
 Asserts scintillaSecondHwnd is eager-allocated before plugin setInfo, and
-dumps menu + split state after NPPN_READY when MACNOTE_PLUGIN_DEBUG=1.
+dumps menu + split state after NPPN_READY when PAPERWASP_PLUGIN_DEBUG=1.
 Catches regressions in the launch sequence before they surface as silent
 compare failures.
 
@@ -381,13 +381,13 @@ cmake --build macos/build --target install_compare_plus
 - [ ] **Step 2: Launch the app**
 
 ```bash
-open macos/build/Debug/MacNotePlusPlus.app
+open macos/build/Debug/PaperWasp.app
 ```
 
 Or run the development binary directly:
 
 ```bash
-./macos/build/Debug/MacNotePlusPlus
+./macos/build/Debug/PaperWasp
 ```
 
 - [ ] **Step 3: Prepare two test files**
@@ -420,7 +420,7 @@ Open both files in the app via File → Open or drag-and-drop.
    - The editor splits into two panes side-by-side.
    - The left pane shows A.txt, the right pane shows B.txt.
    - Line 2 is highlighted as changed; "Unique to A" is marked removed in B's pane and "Unique to B" is marked added.
-   - If nothing visible happens in the right pane, the visibility trigger failed — fall back to diagnosing via `MACNOTE_PLUGIN_DEBUG=1` logs.
+   - If nothing visible happens in the right pane, the visibility trigger failed — fall back to diagnosing via `PAPERWASP_PLUGIN_DEBUG=1` logs.
 5. **Plugins → ComparePlus → Clear Active**. The split view collapses to a single pane; markers vanish.
 6. Repeat steps 3-4, then **Clear All**. Same expected result.
 7. Compare a file with itself: open two separate tabs pointing to `/tmp/A.txt`, Set as First on one, Compare on the other. Expected: a MessageBox appears stating "files are identical."
@@ -495,12 +495,12 @@ gh pr create --base feature/compare-plus-port \
 ## Summary
 - Route NPPM_SETLINENUMBERWIDTHMODE to auto-split / auto-unsplit around the plugin's compareMode transitions so diff markers land in a visible pane.
 - Add no-op handlers for NPPM_HIDETABBAR, NPPM_SETSTATUSBAR, and NPPM_ADDTOOLBARICON_FORDARKMODE.
-- Add pre-init invariants + post-NPPN_READY diagnostics gated on MACNOTE_PLUGIN_DEBUG=1.
+- Add pre-init invariants + post-NPPN_READY diagnostics gated on PAPERWASP_PLUGIN_DEBUG=1.
 
 ## Test plan
 
 - [ ] `macos/scripts/smoke-test-compare.sh`
-- [ ] App launches, `MACNOTE_PLUGIN_DEBUG=1` logs show pre-init pointers non-null
+- [ ] App launches, `PAPERWASP_PLUGIN_DEBUG=1` logs show pre-init pointers non-null
 - [ ] Open /tmp/A.txt and /tmp/B.txt; Set as First on A; Compare from B → split view appears, diffs are visible
 - [ ] Clear Active → split collapses, markers vanish
 - [ ] Clear All after re-Compare → same
@@ -699,7 +699,7 @@ In `macos/CMakeLists.txt`, add to the `SHIM_SOURCES` list (or equivalent — con
 - [ ] **Step 6: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 Expected: clean compile. No linker errors yet (the template is registered but not consumed until Task 9).
@@ -795,7 +795,7 @@ HWND GetDlgItem(HWND hDlg, int nIDDlgItem)
 - [ ] **Step 5: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 Expected: clean compile. No behavior change yet — nothing populates `dlgItemId` until Task 7.
@@ -1004,7 +1004,7 @@ Append to `SHIM_SOURCES`:
 - [ ] **Step 4: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 - [ ] **Step 5: Commit**
@@ -1116,7 +1116,7 @@ Add `EnableWindow`, `SetWindowTextW`, `GetWindowTextW`, `GetWindowTextLengthW` e
 - [ ] **Step 3: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 - [ ] **Step 4: Unit smoke test (ad-hoc)**
@@ -1371,7 +1371,7 @@ Append to `SHIM_SOURCES`:
 - [ ] **Step 7: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 Expected: clean. Dialog infrastructure is now usable but no dialog opens yet because the plugin's dialog files are still stubbed.
@@ -1448,7 +1448,7 @@ Add each missing stub one by one, re-running the build, until the plugin links.
 
 ```bash
 cmake --build macos/build --target install_compare_plus
-open macos/build/Debug/MacNotePlusPlus.app
+open macos/build/Debug/PaperWasp.app
 ```
 
 Plugins → ComparePlus → **Compare Options** → verify:
@@ -1528,7 +1528,7 @@ AutoRegister _register;
 - [ ] **Step 4: Build**
 
 ```bash
-cmake --build macos/build --target MacNotePlusPlus
+cmake --build macos/build --target PaperWasp
 ```
 
 - [ ] **Step 5: Commit**
@@ -1628,12 +1628,12 @@ grep -n "WritePrivateProfileStringW\|GetPluginsConfigDir\|Settings.ini" \
   plugins/comparePlus/src/UserSettings.cpp macos/shim/src/*.mm
 ```
 
-Expected: `UserSettings::save()` calls `WritePrivateProfileStringW` against a path derived from `NPPM_GETPLUGINSCONFIGDIR`. The shim's `WritePrivateProfileStringW` must resolve wide-string paths to the `~/Library/Application Support/MacNote++/plugins/Config/` tree.
+Expected: `UserSettings::save()` calls `WritePrivateProfileStringW` against a path derived from `NPPM_GETPLUGINSCONFIGDIR`. The shim's `WritePrivateProfileStringW` must resolve wide-string paths to the `~/Library/Application Support/PaperWasp/plugins/Config/` tree.
 
 - [ ] **Step 2: Run the app, change a setting, quit, inspect disk**
 
 ```bash
-ls ~/Library/Application\ Support/MacNote++/plugins/Config/
+ls ~/Library/Application\ Support/PaperWasp/plugins/Config/
 ```
 
 Expected: a `ComparePlus.ini` (or similar) file whose contents reflect the change.
@@ -1684,7 +1684,7 @@ gh pr create --base feature/compare-plus-port \
 - [ ] Plugins → ComparePlus → Settings opens; color wells, spin edits, and radio groups render
 - [ ] Changing a setting and running Compare afterward honours the new value
 - [ ] Quit, relaunch, reopen dialog — change survived
-- [ ] `ls ~/Library/Application\ Support/MacNote++/plugins/Config/` shows a ComparePlus.ini
+- [ ] `ls ~/Library/Application\ Support/PaperWasp/plugins/Config/` shows a ComparePlus.ini
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

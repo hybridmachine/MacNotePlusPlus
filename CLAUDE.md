@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MacNotePlusPlus 1.0** is a macOS port of Notepad++, the Windows-native source code editor written in C++20. The upstream Notepad++ wraps the Scintilla editor component and Lexilla lexer library, adding tabbed editing, plugin support, docking panels, and extensive configuration. The original is a Win32 application using the Windows API directly (no cross-platform framework). This project brings that functionality to macOS.
+**PaperWasp 1.0** is an independent macOS port based on Notepad++, the Windows-native source code editor written in C++20. The upstream Notepad++ project wraps the Scintilla editor component and Lexilla lexer library, adding tabbed editing, plugin support, docking panels, and extensive configuration. PaperWasp is not endorsed by the creators of Notepad++.
 
 ## Build Commands
 
@@ -19,18 +19,18 @@ rm -rf *
 cmake -G Xcode ..
 
 # Build the app (development binary)
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 
 # Build the .app bundle (for testing Finder integration, icon, etc.)
-cmake --build . --target MacNotePlusPlus_package
+cmake --build . --target PaperWasp_package
 
 # Build unsigned DMG for distribution
-cmake --build . --target MacNotePlusPlus_dmg
+cmake --build . --target PaperWasp_dmg
 
 # Build with code signing (opt-in, requires Developer ID certificate)
 cmake -G Xcode .. -DCODESIGN_ENABLED=ON -DCODESIGN_IDENTITY="Developer ID Application"
-cmake --build . --target MacNotePlusPlus_sign     # Sign .app bundle
-cmake --build . --target MacNotePlusPlus_dmg      # Build + sign DMG
+cmake --build . --target PaperWasp_sign     # Sign .app bundle
+cmake --build . --target PaperWasp_dmg      # Build + sign DMG
 
 # Full sign + notarize workflow (after building unsigned DMG)
 export CODESIGN_IDENTITY="Developer ID Application"
@@ -40,10 +40,10 @@ export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 macos/scripts/sign-and-notarize.sh
 
 # Run the app (development build)
-./Debug/MacNotePlusPlus
+./Debug/PaperWasp
 
 # Run the packaged app
-open ../dist/MacNote++.app
+open ../dist/PaperWasp.app
 ```
 
 **Important:** Use the Xcode generator (`-G Xcode`). The default Makefiles generator fails on deeply nested object paths in this repo. The Xcode generator is required for reliable builds.

@@ -1,5 +1,5 @@
 // language_defs.mm — Language table and extension-based detection
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Foundation/Foundation.h>
 #include "language_defs.h"

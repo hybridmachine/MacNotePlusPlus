@@ -1,5 +1,5 @@
 // app_state.mm — Global AppContext storage
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "app_state.h"
 

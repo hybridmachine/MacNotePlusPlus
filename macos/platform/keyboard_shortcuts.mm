@@ -1,5 +1,5 @@
 // keyboard_shortcuts.mm — Native macOS keyboard shortcut configuration
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 //
 // Remaps Scintilla key bindings to match macOS Human Interface Guidelines:
 //   Home/End        → line start/end (not document)

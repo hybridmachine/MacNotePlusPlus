@@ -1,5 +1,5 @@
 // change_history.h — Change history margin markers
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

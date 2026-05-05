@@ -1,5 +1,5 @@
 // app_state.h — Shared application state (globals + AppContext)
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 //
 // Design note: All mutable application state is grouped in AppContext.
 // A single global instance is accessed via ctx(). This centralizes

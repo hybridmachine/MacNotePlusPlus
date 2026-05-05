@@ -1,5 +1,5 @@
 // bookmarks.mm — Bookmark toggle/navigation
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "bookmarks.h"
 #include "npp_constants.h"

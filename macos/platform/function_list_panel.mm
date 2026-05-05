@@ -11,7 +11,7 @@
 #include <cstdio>
 static FILE* dbgLog()
 {
-	static FILE* f = fopen("/tmp/MacNotePP.log", "a");
+	static FILE* f = fopen("/tmp/PaperWasp.log", "a");
 	return f;
 }
 #define FLLOG(fmt, ...) do { if (FILE* _f = dbgLog()) { fprintf(_f, "[FL] " fmt "\n", ##__VA_ARGS__); fflush(_f); } } while(0)
@@ -256,7 +256,7 @@ static std::unordered_map<uint64_t, FunctionListCacheEntry> sFunctionListCache;
 
 static dispatch_queue_t parseQueue()
 {
-	static dispatch_queue_t q = dispatch_queue_create("com.notepadpp.functionlist.parse", DISPATCH_QUEUE_SERIAL);
+	static dispatch_queue_t q = dispatch_queue_create("com.paperwasp.functionlist.parse", DISPATCH_QUEUE_SERIAL);
 	return q;
 }
 

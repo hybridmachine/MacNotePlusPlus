@@ -114,7 +114,7 @@ Run:
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 ```
 
 Expected: build succeeds. No warnings about the new selectors (they're declared and implemented).
@@ -202,7 +202,7 @@ void Win32Radio_Init(void* hwndVoid, int groupIndex)
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 ```
 
 Expected: build succeeds. The function is unused for now — no warning because it has external linkage.
@@ -298,7 +298,7 @@ This keeps behavior identical to today (every radio falls back to `buttonClicked
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 ```
 
 Expected: build succeeds.
@@ -371,7 +371,7 @@ Replace it with:
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 ```
 
 Expected: build succeeds.
@@ -401,8 +401,8 @@ The shim has no UI test harness. Verify by hand on a Debug build.
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
-./Debug/MacNotePlusPlus
+cmake --build . --target PaperWasp
+./Debug/PaperWasp
 ```
 
 - [ ] **Step 2: Open two files and the ComparePlus Settings dialog**
@@ -438,7 +438,7 @@ If steps 3-5 all pass, the fix is complete. If any step fails, document which ra
 
 ```bash
 cd macos/build
-cmake --build . --target MacNotePlusPlus
+cmake --build . --target PaperWasp
 ```
 
 Expected: build succeeds, working tree is clean (`git status` shows no pending changes beyond pre-existing untracked files).

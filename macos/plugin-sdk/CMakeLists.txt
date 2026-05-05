@@ -1,11 +1,11 @@
-# MacNote++ Plugin SDK
-# For building plugins as .dylib files that load into MacNote++.
+# PaperWasp Plugin SDK
+# For building plugins as .dylib files that load into PaperWasp.
 #
 # Plugins include PluginInterface.h which pulls in Notepad_plus_msgs.h and Scintilla.h.
 # On macOS, <windows.h> resolves to the Win32 shim from macos/shim/include/.
 
 cmake_minimum_required(VERSION 3.20)
-project(MacNotePlusPluginSDK LANGUAGES CXX)
+project(PaperWaspPluginSDK LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 # Paths to headers
@@ -14,10 +14,10 @@ set(NPP_PLUGINS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../PowerEditor/src/MISC/Plug
 set(SCINTILLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../scintilla/include")
 
 # Example plugin
-add_subdirectory(example/HelloMacNote)
+add_subdirectory(example/HelloPaperWasp)
 
 # Apply SDK include paths to all plugin targets
-target_include_directories(HelloMacNote PRIVATE
+target_include_directories(HelloPaperWasp PRIVATE
     "${SHIM_DIR}"
     "${NPP_PLUGINS_DIR}"
     "${SCINTILLA_DIR}"

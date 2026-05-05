@@ -1,5 +1,5 @@
 // toolbar.mm — NSToolbar with SF Symbols
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "toolbar.h"
@@ -7,7 +7,7 @@
 #include "app_state.h"
 #include "windows.h"
 
-static NSString* const kToolbarIdentifier = @"MacNotePPToolbar";
+static NSString* const kToolbarIdentifier = @"PaperWaspToolbar";
 
 static NSString* const kNewItem      = @"ToolbarNew";
 static NSString* const kOpenItem     = @"ToolbarOpen";

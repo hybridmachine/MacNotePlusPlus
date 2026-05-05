@@ -1,5 +1,5 @@
 // file_path_ops.h — Reveal in Finder and copy-path commands
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

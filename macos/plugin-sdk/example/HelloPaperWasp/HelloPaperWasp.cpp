@@ -1,4 +1,4 @@
-// HelloMacNote — Sample Notepad++ plugin
+// HelloPaperWasp — Sample PaperWasp plugin
 // Compiles on both Windows (.dll) and macOS (.dylib) without #ifdef guards.
 
 #include "PluginInterface.h"
@@ -14,7 +14,7 @@ static FuncItem funcItems[NB_FUNC];
 
 static void helloWorld()
 {
-	::MessageBox(nppData._nppHandle, L"Hello from MacNote++ plugin!", L"HelloMacNote", MB_OK);
+	::MessageBox(nppData._nppHandle, L"Hello from PaperWasp plugin!", L"HelloPaperWasp", MB_OK);
 }
 
 static void insertTimestamp()
@@ -39,7 +39,7 @@ static void showVersion()
 	int minor = LOWORD(ver);
 
 	wchar_t msg[128];
-	swprintf(msg, 128, L"MacNote++ version: %d.%d", major, minor);
+	swprintf(msg, 128, L"PaperWasp compatibility API version: %d.%d", major, minor);
 	::MessageBox(nppData._nppHandle, msg, L"Version", MB_OK);
 }
 
@@ -64,7 +64,7 @@ extern "C" __declspec(dllexport) void setInfo(NppData nd)
 
 extern "C" __declspec(dllexport) const wchar_t* getName()
 {
-	return L"HelloMacNote";
+	return L"HelloPaperWasp";
 }
 
 extern "C" __declspec(dllexport) FuncItem* getFuncsArray(int* nbItems)

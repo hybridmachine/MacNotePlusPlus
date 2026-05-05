@@ -1,5 +1,5 @@
 // autocomplete.mm — Word auto-completion
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "autocomplete.h"
 #include "npp_constants.h"

@@ -1,5 +1,5 @@
 // string_utils.h — wchar_t <-> NSString conversion helpers
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

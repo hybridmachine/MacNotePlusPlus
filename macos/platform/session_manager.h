@@ -1,5 +1,5 @@
 // session_manager.h — Session save/restore
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

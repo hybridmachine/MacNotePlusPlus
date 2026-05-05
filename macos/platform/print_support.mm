@@ -1,5 +1,5 @@
 // print_support.mm — Printing via macOS print system (Phase 1 MVP)
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "print_support.h"

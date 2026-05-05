@@ -1,5 +1,5 @@
 // document_manager.mm — Tab/document management, state save/restore
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "document_manager.h"
 #include "npp_constants.h"
@@ -149,7 +149,7 @@ void switchToTabInView(int viewIndex, int tabIndex)
 
 	const auto& doc = docs[tabIndex];
 	NSString* title = WideToNSString(doc.title.c_str());
-	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", title]];
+	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", title]];
 	updateWindowDocumentEdited();
 
 	// Notify plugins that a buffer was activated
@@ -224,7 +224,7 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 	refreshSyncScrollAnchor();
 
 	NSString* nsTitle = WideToNSString(title.c_str());
-	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", nsTitle]];
+	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", nsTitle]];
 
 	return newIndex;
 }
@@ -279,7 +279,7 @@ void closeTabFromView(int viewIndex, int tabIndex)
 			tcItem.pszText = untitled;
 			SendMessageW(tabHwnd, TCM_SETITEMW, 0, reinterpret_cast<LPARAM>(&tcItem));
 		}
-		[ctx().mainWindow setTitle:@"Notepad++ — Untitled"];
+		[ctx().mainWindow setTitle:@"PaperWasp — Untitled"];
 		updateTabModifiedIndicator(viewIndex, 0);
 		updateWindowDocumentEdited();
 
@@ -322,7 +322,7 @@ void closeTabFromView(int viewIndex, int tabIndex)
 
 	const auto& doc = docs[activeTab];
 	NSString* title = WideToNSString(doc.title.c_str());
-	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", title]];
+	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", title]];
 	updateWindowDocumentEdited();
 
 	// Notify plugins that the file has been closed

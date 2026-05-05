@@ -1,5 +1,5 @@
 // print_support.h — Printing via macOS print system
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

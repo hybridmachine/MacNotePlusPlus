@@ -217,7 +217,7 @@ Upstream `doDialog()` is modeless with its own message loop. We model it as a **
 
 ### 4.7 Settings persistence
 
-`UserSettings::save()` (in `UserSettings.cpp`) writes INI via `WritePrivateProfileStringW`. Verify the shim's INI writer resolves paths against `NPPM_GETPLUGINSCONFIGDIR` (`~/Library/Application Support/MacNote++/plugins/Config/`).
+`UserSettings::save()` (in `UserSettings.cpp`) writes INI via `WritePrivateProfileStringW`. Verify the shim's INI writer resolves paths against `NPPM_GETPLUGINSCONFIGDIR` (`~/Library/Application Support/PaperWasp/plugins/Config/`).
 
 ### 4.8 Testing plan — PR 2
 
@@ -245,7 +245,7 @@ Upstream `doDialog()` is modeless with its own message loop. We model it as a **
 ### 5.1 Testing strategy across both PRs
 
 Three layers:
-- **Launch-time assertions** (`macos/platform/plugin_invariants.mm`, gated behind `MACNOTE_PLUGIN_DEBUG=1`): `scintillaSecondHwnd != nullptr` after `applicationDidFinishLaunching`, plugin command-ID allocations within range, `NPPM_GETMENUHANDLE(NPPPLUGINMENU)` non-null. Catches ordering regressions; doesn't prove compare works.
+- **Launch-time assertions** (`macos/platform/plugin_invariants.mm`, gated behind `PAPERWASP_PLUGIN_DEBUG=1`): `scintillaSecondHwnd != nullptr` after `applicationDidFinishLaunching`, plugin command-ID allocations within range, `NPPM_GETMENUHANDLE(NPPPLUGINMENU)` non-null. Catches ordering regressions; doesn't prove compare works.
 - **Focused unit tests** (2 per PR, under `macos/tests/`). Catches single-unit regressions; doesn't exercise integration.
 - **Manual smoke tests** (Sections 3.5, 4.8). Authoritative; recorded in PR description as a reviewer checklist.
 
@@ -257,7 +257,7 @@ We deliberately **do not** build automated end-to-end diff tests. That infrastru
 - `NSLog` on dialog template parse, with the control-class histogram.
 - `NSLog` when `StaticDialog::create()` hits the unknown-control fallback.
 
-All gated behind `MACNOTE_PLUGIN_DEBUG=1`.
+All gated behind `PAPERWASP_PLUGIN_DEBUG=1`.
 
 ### 5.3 Rollback
 
@@ -276,7 +276,7 @@ All gated behind `MACNOTE_PLUGIN_DEBUG=1`.
 1. Exact `SCI_*` messages the Engine sends that our bridge doesn't handle yet. Resolution: grep `sciFunc(` in `plugins/comparePlus/src/Engine/Engine.cpp` and `NppHelpers.cpp`; cross-reference `scintilla_bridge.mm`.
 2. Does the bridge forward `SCI_ANNOTATIONSETTEXT` / `SCI_ANNOTATIONSETSTYLE`? If not, plan decides PR 1 vs defer.
 3. Exact control inventory for the two target `.rc` files. Produce a `{class, count, max instance ID}` table; flag unmapped controls.
-4. Does `UserSettings::save()` succeed against `~/Library/Application Support/MacNote++/plugins/Config/` through the existing `WritePrivateProfileStringW` shim?
+4. Does `UserSettings::save()` succeed against `~/Library/Application Support/PaperWasp/plugins/Config/` through the existing `WritePrivateProfileStringW` shim?
 5. Does the "first write un-hides second view" trigger fire reliably, or does the Engine issue reads before writes? Enumerate the first N Scintilla calls in `Engine.cpp`'s setup prologue; widen trigger to "any `SCI_*` against second handle with compareMode implied" if reads precede writes.
 6. Does `EnableMenuItem`'s disabled/enabled flag propagate to `NSMenuItem.enabled`?
 7. What base branch should PR 1 fork from? `git log --graph master..feature/compare-plus-port` to decide.

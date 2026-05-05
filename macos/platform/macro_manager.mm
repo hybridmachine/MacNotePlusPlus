@@ -1,5 +1,5 @@
 // macro_manager.mm — Macro recording, playback, and persistence
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "macro_manager.h"
@@ -174,7 +174,8 @@ bool MacroManager::hasRecordedMacro() const
 std::string MacroManager::macrosDir() const
 {
 	NSString* home = NSHomeDirectory();
-	NSString* dir = [home stringByAppendingPathComponent:@".npp-macos"];
+	NSString* dir = [[home stringByAppendingPathComponent:@"Library/Application Support"]
+		stringByAppendingPathComponent:@"PaperWasp"];
 	const char* fs = [dir fileSystemRepresentation];
 	if (!fs) return "";
 	return std::string(fs);

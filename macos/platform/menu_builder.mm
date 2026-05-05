@@ -1,5 +1,5 @@
 // menu_builder.mm — Menu bar construction
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "menu_builder.h"
 #include "npp_constants.h"
@@ -215,7 +215,7 @@ HMENU buildMenuBar()
 
 	// Help menu
 	HMENU hHelpMenu = CreatePopupMenu();
-	AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"About MacNote++");
+	AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"About PaperWasp");
 	AppendMenuW(hMenuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(hHelpMenu), L"&Help");
 
 	return hMenuBar;

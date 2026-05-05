@@ -1,5 +1,5 @@
 // find_replace.mm — Find/Replace dialog and search logic
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "find_replace.h"

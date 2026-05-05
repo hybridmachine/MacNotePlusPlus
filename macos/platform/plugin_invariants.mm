@@ -8,7 +8,7 @@ static bool debugEnabled()
     static int cached = -1;
     if (cached < 0)
     {
-        const char* v = getenv("MACNOTE_PLUGIN_DEBUG");
+        const char* v = getenv("PAPERWASP_PLUGIN_DEBUG");
         cached = (v && v[0] == '1') ? 1 : 0;
     }
     return cached == 1;

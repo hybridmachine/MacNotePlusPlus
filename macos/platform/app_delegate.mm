@@ -1,5 +1,5 @@
 // app_delegate.mm — Application delegate, lifecycle, drag-and-drop
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "app_delegate.h"
@@ -156,13 +156,13 @@ static void setDockIconFromLogo()
 	WNDCLASSEXW wc = {};
 	wc.cbSize = sizeof(wc);
 	wc.lpfnWndProc = MainWndProc;
-	wc.lpszClassName = L"Notepad++Phase7";
+	wc.lpszClassName = L"PaperWaspMainWindow";
 	RegisterClassExW(&wc);
 
 	HMENU hMenuBar = buildMenuBar();
 
 	ctx().mainHwnd = CreateWindowExW(
-		0, L"Notepad++Phase7", L"Notepad++ (macOS) — Phase 7",
+		0, L"PaperWaspMainWindow", L"PaperWasp",
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		static_cast<int>(s.windowWidth), static_cast<int>(s.windowHeight),
@@ -407,7 +407,7 @@ static void setDockIconFromLogo()
 		});
 
 	const char* welcomeText =
-		"// Welcome to Notepad++ on macOS \xe2\x80\x94 Phase 7!\n"
+		"// Welcome to PaperWasp!\n"
 		"//\n"
 		"// What's new in Phase 7:\n"
 		"//   - Settings persistence (window pos, font, recent files)\n"
@@ -519,7 +519,7 @@ static void setDockIconFromLogo()
 
 	restoreSession();
 
-	// Handle CLI arguments (for direct executable launch: ./MacOSNotePP file.txt)
+	// Handle CLI arguments (for direct executable launch: ./PaperWasp file.txt)
 	NSArray<NSString*>* args = [[NSProcessInfo processInfo] arguments];
 	for (NSUInteger i = 1; i < args.count; ++i)
 	{
@@ -579,7 +579,7 @@ static void setDockIconFromLogo()
 		pluginManager().notify(&tbNotif);
 	}
 
-	NSLog(@"=== Notepad++ macOS Port — Phase 7 ===");
+	NSLog(@"=== PaperWasp ===");
 	NSLog(@"Settings, split view, edit commands, encoding, session, drag-and-drop!");
 }
 

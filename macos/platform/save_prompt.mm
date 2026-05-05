@@ -1,5 +1,5 @@
 // save_prompt.mm — Save-before-close prompts
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "save_prompt.h"

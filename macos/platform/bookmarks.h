@@ -1,5 +1,5 @@
 // bookmarks.h — Bookmark toggle/navigation
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #pragma once
 

@@ -159,7 +159,7 @@ Strings::Strings() : _currentLocale {"english"}
 		{ "IDC_HIDE_MOVED_LINES",			"Hide moved lines" },
 		{ "IDC_SHOW_ONLY_SELECTIONS",		"Show only compared selections" },
 
-		{ "CONFIG_DIR_FAIL",			"Notepad++ plugins config folder\n'%s'\ndoesn't exist and failed to be created.\nCannot write configuration file." },
+		{ "CONFIG_DIR_FAIL",			"PaperWasp plugins config folder\n'%s'\ndoesn't exist and failed to be created.\nCannot write configuration file." },
 		{ "CONFIG_WRITE_FAIL",			"Failed to write configuration file\n'%s'" },
 
 		{ "MARK_NEW",					" ** New to Compare" },
@@ -216,8 +216,8 @@ Strings::Strings() : _currentLocale {"english"}
 		{ "PATCH_SELECT",				"Select patch file:" },
 
 		{ "MSG_CMD_LINE_AMBIGUOUS",		"Command line file name ambiguous (several opened files with that name) - compare aborted.\nEither use full file paths or add '-nosession' option to command line." },
-		{ "MSG_NOT_COMPATIBLE",			"%s version is not compatible with current Notepad++ version.\nPlugin will be disabled." },
-		{ "MSG_MARKER_ALLOC_FAIL",		"Notepad++ marker allocation for visualizing diff changes failed.\nDefault one will be used but conflicts with other plugins might appear.\nPlease switch to Notepad++ version 8.5.6 or newer." },
+		{ "MSG_NOT_COMPATIBLE",			"%s version is not compatible with the current PaperWasp compatibility API.\nPlugin will be disabled." },
+		{ "MSG_MARKER_ALLOC_FAIL",		"PaperWasp marker allocation for visualizing diff changes failed.\nDefault one will be used but conflicts with other plugins might appear.\nPlease use a PaperWasp build with Notepad++ API emulation 8.5.6 or newer." },
 		{ "MSG_MARGIN_ALLOC_FAIL",		"Allocating new margin for compare diff symbols failed.\nLines diff symbols will not be visible." },
 		{ "MSG_ALREADY_COMPARED",		"File '%s' is already compared - operation ignored." },
 		{ "MSG_ENCODINGS",				"Trying to compare files with different encodings - the result might be inaccurate and misleading.\n\nCompare anyway?" },
@@ -246,7 +246,7 @@ Strings::Strings() : _currentLocale {"english"}
 		{ "MSG_IGNORED_DIFFS",			"\n\nDiffs exist but have been ignored due to the compare options." },
 		{ "MSG_PROMPT_CLOSE",			"\n\nClose compared files?" },
 		{ "MSG_COMPARE_FAIL",			"Failure allocating resources, compare aborted" },
-		{ "MSG_REPLACED",				"Compared file text replaced by Notepad++. Please manually re-compare to make sure compare results are valid!" },
+		{ "MSG_REPLACED",				"Compared file text replaced by PaperWasp. Please manually re-compare to make sure compare results are valid!" },
 		{ "MSG_HIDDEN_NOT_POSSIBLE",	"Operation not possible while diffs are hidden." },
 		{ "MSG_PATCH_NO_UNIQUE",		"Patch generation for 'Find Unique' commands is currently not supported." },
 		{ "MSG_PATCH_NO_MODIFIED",		"Compared file is modified, generating patch is not possible.\nPlease manually re-compare and try again." },

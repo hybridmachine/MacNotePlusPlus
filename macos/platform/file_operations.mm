@@ -1,5 +1,5 @@
 // file_operations.mm — File I/O, encoding detection, open/save
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "file_operations.h"
 #include <vector>
@@ -334,7 +334,7 @@ void saveCurrentFile()
 			updateTabModifiedIndicator(ctx().activeView, tabIdx);
 			updateWindowDocumentEdited();
 			NSString* nsTitle = WideToNSString(doc.title.c_str());
-			[ctx().mainWindow setTitle:[NSString stringWithFormat:@"Notepad++ — %@", nsTitle]];
+			[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", nsTitle]];
 
 			addRecentFile(doc.filePath);
 			rebuildRecentMenu();

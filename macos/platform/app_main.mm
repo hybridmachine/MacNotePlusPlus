@@ -1,5 +1,5 @@
 // app_main.mm — Application entry point
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "app_delegate.h"

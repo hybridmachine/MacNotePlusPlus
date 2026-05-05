@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
-project(NotepadPlusPlusMac LANGUAGES C CXX OBJC OBJCXX)
+project(PaperWaspMac LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 20)
 
-# Root of the Notepad++ source tree
+# Root of the upstream Notepad++ source tree
 set(NPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(PAPERWASP_APP_NAME "PaperWasp")
+set(PAPERWASP_BUNDLE_IDENTIFIER "com.softcentral.paperwasp")
 
 # ============================================================
 # Code Signing Configuration (opt-in)
@@ -14,7 +16,7 @@ set(NPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 option(CODESIGN_ENABLED "Enable code signing for the app bundle and DMG" OFF)
 set(CODESIGN_IDENTITY "Developer ID Application" CACHE STRING
     "Code signing identity (e.g., 'Developer ID Application: Your Name (TEAMID)')")
-set(CODESIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/platform/MacNote.entitlements" CACHE FILEPATH
+set(CODESIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/platform/PaperWasp.entitlements" CACHE FILEPATH
     "Path to entitlements plist for hardened runtime")
 
 if(CODESIGN_ENABLED)
@@ -333,7 +335,7 @@ add_custom_target(AppIcon DEPENDS "${CMAKE_BINARY_DIR}/AppIcon.icns")
 # ============================================================
 # Main macOS app target
 # ============================================================
-add_executable(MacNotePlusPlus
+add_executable(PaperWasp
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_main.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_state.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_delegate.mm"
@@ -389,7 +391,7 @@ add_executable(MacNotePlusPlus
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/compare_plus_visibility.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_invariants.mm"
 )
-target_include_directories(MacNotePlusPlus PRIVATE
+target_include_directories(PaperWasp PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/platform"
     "${SHIM_INCLUDE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/shim/src"
@@ -398,7 +400,7 @@ target_include_directories(MacNotePlusPlus PRIVATE
     "${UCHARDET_DIR}"
     "${NPP_SRC_DIR}/MISC/PluginsManager"
 )
-target_link_libraries(MacNotePlusPlus
+target_link_libraries(PaperWasp
     win32shim
     scintilla_bridge
     Scintilla
@@ -411,7 +413,7 @@ target_link_libraries(MacNotePlusPlus
     "-framework UniformTypeIdentifiers"
     "-framework CoreServices"
 )
-target_compile_options(MacNotePlusPlus PRIVATE
+target_compile_options(PaperWasp PRIVATE
     -fobjc-arc
     -Wno-deprecated-declarations
 )
@@ -421,49 +423,49 @@ target_compile_options(MacNotePlusPlus PRIVATE
 # present in the dynamic symbol table — without it, ld drops any shim
 # .o the host itself doesn't reference, and plugins crash at runtime
 # calling through a null function pointer.
-target_link_options(MacNotePlusPlus PRIVATE
+target_link_options(PaperWasp PRIVATE
     -Wl,-export_dynamic
     "LINKER:-force_load,$<TARGET_FILE:win32shim>"
 )
-add_dependencies(MacNotePlusPlus AppIcon)
-add_custom_command(TARGET MacNotePlusPlus POST_BUILD
+add_dependencies(PaperWasp AppIcon)
+add_custom_command(TARGET PaperWasp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${NPP_ROOT}/logo.png"
-        "$<TARGET_FILE_DIR:MacNotePlusPlus>/logo.png"
+        "$<TARGET_FILE_DIR:PaperWasp>/logo.png"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_BINARY_DIR}/AppIcon.icns"
-        "$<TARGET_FILE_DIR:MacNotePlusPlus>/AppIcon.icns"
+        "$<TARGET_FILE_DIR:PaperWasp>/AppIcon.icns"
     COMMENT "Copying logo.png and AppIcon.icns"
 )
 
 # ============================================================
-# Sample plugin: HelloMacNote
+# Sample plugin: HelloPaperWasp
 # ============================================================
-add_library(HelloMacNote MODULE
-    "${CMAKE_CURRENT_SOURCE_DIR}/plugin-sdk/example/HelloMacNote/HelloMacNote.cpp"
+add_library(HelloPaperWasp MODULE
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin-sdk/example/HelloPaperWasp/HelloPaperWasp.cpp"
 )
-target_include_directories(HelloMacNote PRIVATE
+target_include_directories(HelloPaperWasp PRIVATE
     "${SHIM_INCLUDE_DIR}"
     "${NPP_SRC_DIR}/MISC/PluginsManager"
     "${SCINTILLA_INCLUDE_DIR}"
 )
-set_target_properties(HelloMacNote PROPERTIES
+set_target_properties(HelloPaperWasp PROPERTIES
     PREFIX ""
     SUFFIX ".dylib"
-    OUTPUT_NAME "HelloMacNote"
+    OUTPUT_NAME "HelloPaperWasp"
 )
-target_compile_options(HelloMacNote PRIVATE -Wno-deprecated-declarations)
-target_link_options(HelloMacNote PRIVATE -undefined dynamic_lookup)
+target_compile_options(HelloPaperWasp PRIVATE -Wno-deprecated-declarations)
+target_link_options(HelloPaperWasp PRIVATE -undefined dynamic_lookup)
 
 # Opt-in install target: cmake --build . --target install_sample_plugin
 add_custom_target(install_sample_plugin
-    DEPENDS HelloMacNote
+    DEPENDS HelloPaperWasp
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/HelloMacNote"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/HelloPaperWasp"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:HelloMacNote>"
-        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/HelloMacNote/HelloMacNote.dylib"
-    COMMENT "Installing HelloMacNote plugin to ~/Library/Application Support/MacNote++/plugins/"
+        "$<TARGET_FILE:HelloPaperWasp>"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/HelloPaperWasp/HelloPaperWasp.dylib"
+    COMMENT "Installing HelloPaperWasp plugin to ~/Library/Application Support/PaperWasp/plugins/"
 )
 
 # ============================================================
@@ -522,43 +524,43 @@ target_link_libraries(ComparePlus PRIVATE
 add_custom_target(install_compare_plus
     DEPENDS ComparePlus
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/ComparePlus"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/ComparePlus"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:ComparePlus>"
-        "$ENV{HOME}/Library/Application Support/MacNote++/plugins/ComparePlus/ComparePlus.dylib"
-    COMMENT "Installing ComparePlus plugin to ~/Library/Application Support/MacNote++/plugins/"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/ComparePlus/ComparePlus.dylib"
+    COMMENT "Installing ComparePlus plugin to ~/Library/Application Support/PaperWasp/plugins/"
 )
 
 # ============================================================
 # Packaging: App bundle, code signing, and DMG
 # ============================================================
 set(NPP_MACOS_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dist")
-set(NPP_MACOS_APP_BUNDLE "${NPP_MACOS_DIST_DIR}/MacNote++.app")
+set(NPP_MACOS_APP_BUNDLE "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.app")
 set(NPP_MACOS_APP_CONTENTS "${NPP_MACOS_APP_BUNDLE}/Contents")
 set(NPP_MACOS_APP_MACOS "${NPP_MACOS_APP_CONTENTS}/MacOS")
 set(NPP_MACOS_APP_RESOURCES "${NPP_MACOS_APP_CONTENTS}/Resources")
 set(NPP_MACOS_DMG_ROOT "${NPP_MACOS_DIST_DIR}/dmg-root")
-set(NPP_MACOS_DMG_APP_BUNDLE "${NPP_MACOS_DMG_ROOT}/MacNote++.app")
-set(NPP_MACOS_UNSIGNED_DMG "${NPP_MACOS_DIST_DIR}/MacNotePlusPlus-unsigned.dmg")
-set(NPP_MACOS_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/MacNote++-Info.plist")
+set(NPP_MACOS_DMG_APP_BUNDLE "${NPP_MACOS_DMG_ROOT}/${PAPERWASP_APP_NAME}.app")
+set(NPP_MACOS_UNSIGNED_DMG "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}-unsigned.dmg")
+set(NPP_MACOS_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PAPERWASP_APP_NAME}-Info.plist")
 
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/MacNoteInfo.plist.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/PaperWaspInfo.plist.in"
     "${NPP_MACOS_INFO_PLIST}"
     @ONLY
 )
 
 set(NPP_MACOS_APP_PLUGINS "${NPP_MACOS_APP_CONTENTS}/PlugIns")
 
-add_custom_target(MacNotePlusPlus_package
-    DEPENDS MacNotePlusPlus ComparePlus
+add_custom_target(PaperWasp_package
+    DEPENDS PaperWasp ComparePlus
     COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_APP_BUNDLE}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_MACOS}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_RESOURCES}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/ComparePlus"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:MacNotePlusPlus>"
-        "${NPP_MACOS_APP_MACOS}/MacNotePlusPlus"
+        "$<TARGET_FILE:PaperWasp>"
+        "${NPP_MACOS_APP_MACOS}/${PAPERWASP_APP_NAME}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:ComparePlus>"
         "${NPP_MACOS_APP_PLUGINS}/ComparePlus/ComparePlus.dylib"
@@ -574,7 +576,7 @@ add_custom_target(MacNotePlusPlus_package
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${NPP_MACOS_INFO_PLIST}"
         "${NPP_MACOS_APP_CONTENTS}/Info.plist"
-    COMMENT "Packaging MacNote++.app"
+    COMMENT "Packaging ${PAPERWASP_APP_NAME}.app"
 )
 
 if(CODESIGN_ENABLED)
@@ -588,12 +590,12 @@ if(CODESIGN_ENABLED)
     else()
         set(NPP_SIGN_STAGE_ROOT "/tmp")
     endif()
-    set(NPP_SIGN_STAGE "${NPP_SIGN_STAGE_ROOT}/MacNotePP-sign-stage")
-    set(NPP_SIGN_STAGE_APP "${NPP_SIGN_STAGE}/MacNote++.app")
+    set(NPP_SIGN_STAGE "${NPP_SIGN_STAGE_ROOT}/PaperWasp-sign-stage")
+    set(NPP_SIGN_STAGE_APP "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.app")
     set(NPP_SIGN_STAGE_DMG_ROOT "${NPP_SIGN_STAGE}/dmg-root")
 
-    add_custom_target(MacNotePlusPlus_sign
-        DEPENDS MacNotePlusPlus_package
+    add_custom_target(PaperWasp_sign
+        DEPENDS PaperWasp_package
         COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_SIGN_STAGE}"
         COMMAND ditto --norsrc
@@ -612,48 +614,48 @@ if(CODESIGN_ENABLED)
         COMMAND ditto "${NPP_SIGN_STAGE_APP}" "${NPP_MACOS_APP_BUNDLE}"
         COMMAND ${CMAKE_COMMAND} -E echo
             "Signed app bundle: ${NPP_MACOS_APP_BUNDLE}"
-        COMMENT "Code signing MacNote++.app with '${CODESIGN_IDENTITY}'"
+        COMMENT "Code signing ${PAPERWASP_APP_NAME}.app with '${CODESIGN_IDENTITY}'"
     )
 
-    add_custom_target(MacNotePlusPlus_dmg
-        DEPENDS MacNotePlusPlus_sign
+    add_custom_target(PaperWasp_dmg
+        DEPENDS PaperWasp_sign
         COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_SIGN_STAGE_DMG_ROOT}"
-        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE_DMG_ROOT}/MacNote++.app"
-        COMMAND ditto "${NPP_SIGN_STAGE_APP}" "${NPP_SIGN_STAGE_DMG_ROOT}/MacNote++.app"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE_DMG_ROOT}/${PAPERWASP_APP_NAME}.app"
+        COMMAND ditto "${NPP_SIGN_STAGE_APP}" "${NPP_SIGN_STAGE_DMG_ROOT}/${PAPERWASP_APP_NAME}.app"
         COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE_DMG_ROOT}/Applications"
         COMMAND ${CMAKE_COMMAND} -E create_symlink
             "/Applications"
             "${NPP_SIGN_STAGE_DMG_ROOT}/Applications"
-        COMMAND ${CMAKE_COMMAND} -E rm -f "${NPP_SIGN_STAGE}/MacNotePlusPlus.dmg"
+        COMMAND ${CMAKE_COMMAND} -E rm -f "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
         COMMAND hdiutil create
-            -volname "MacNotePlusPlus"
+            -volname "${PAPERWASP_APP_NAME}"
             -srcfolder "${NPP_SIGN_STAGE_DMG_ROOT}"
             -format UDZO
             -ov
-            "${NPP_SIGN_STAGE}/MacNotePlusPlus.dmg"
+            "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
         COMMAND codesign --force --sign "${CODESIGN_IDENTITY}"
-            --timestamp "${NPP_SIGN_STAGE}/MacNotePlusPlus.dmg"
-        COMMAND codesign --verify --verbose=2 "${NPP_SIGN_STAGE}/MacNotePlusPlus.dmg"
+            --timestamp "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND codesign --verify --verbose=2 "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
         COMMAND ${CMAKE_COMMAND} -E copy
-            "${NPP_SIGN_STAGE}/MacNotePlusPlus.dmg"
-            "${NPP_MACOS_DIST_DIR}/MacNotePlusPlus.dmg"
+            "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+            "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.dmg"
         COMMAND ${CMAKE_COMMAND} -E echo
-            "Signed DMG: ${NPP_MACOS_DIST_DIR}/MacNotePlusPlus.dmg"
+            "Signed DMG: ${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.dmg"
         COMMAND ${CMAKE_COMMAND} -E echo
             "NOTE: If your project directory is iCloud-synced, signature verification"
         COMMAND ${CMAKE_COMMAND} -E echo
             "may fail locally due to Finder xattrs. The DMG is valid for distribution."
         COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE}"
-        COMMENT "Building and signing MacNotePlusPlus.dmg"
+        COMMENT "Building and signing ${PAPERWASP_APP_NAME}.dmg"
     )
 else()
-    add_custom_target(MacNotePlusPlus_sign
-        DEPENDS MacNotePlusPlus_package
+    add_custom_target(PaperWasp_sign
+        DEPENDS PaperWasp_package
         COMMENT "Code signing SKIPPED (CODESIGN_ENABLED=OFF)"
     )
 
-    add_custom_target(MacNotePlusPlus_dmg
-        DEPENDS MacNotePlusPlus_sign
+    add_custom_target(PaperWasp_dmg
+        DEPENDS PaperWasp_sign
         COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_DMG_ROOT}"
         COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_DMG_APP_BUNDLE}"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -665,21 +667,21 @@ else()
             "${NPP_MACOS_DMG_ROOT}/Applications"
         COMMAND ${CMAKE_COMMAND} -E rm -f "${NPP_MACOS_UNSIGNED_DMG}"
         COMMAND hdiutil create
-            -volname "MacNotePlusPlus"
+            -volname "${PAPERWASP_APP_NAME}"
             -srcfolder "${NPP_MACOS_DMG_ROOT}"
             -format UDZO
             -ov
             "${NPP_MACOS_UNSIGNED_DMG}"
-        COMMENT "Building MacNotePlusPlus-unsigned.dmg"
+        COMMENT "Building ${PAPERWASP_APP_NAME}-unsigned.dmg"
     )
 endif()
 
-message(STATUS "=== Notepad++ macOS Port ===")
+message(STATUS "=== PaperWasp macOS Port ===")
 message(STATUS "Compatibility compile target: npp_macos_compile_test")
-message(STATUS "App target: MacNotePlusPlus")
-message(STATUS "Packaging target: MacNotePlusPlus_package")
-message(STATUS "Signing target: MacNotePlusPlus_sign")
-message(STATUS "DMG target: MacNotePlusPlus_dmg")
+message(STATUS "App target: PaperWasp")
+message(STATUS "Packaging target: PaperWasp_package")
+message(STATUS "Signing target: PaperWasp_sign")
+message(STATUS "DMG target: PaperWasp_dmg")
 message(STATUS "Shim headers: ${SHIM_INCLUDE_DIR}")
 message(STATUS "Scintilla: ${SCINTILLA_DIR}")
 message(STATUS "Lexilla: ${LEXILLA_DIR}")

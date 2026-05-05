@@ -1,5 +1,5 @@
 // tab_context_menu.mm — Tab bar context menu (right-click)
-// Part of the Notepad++ macOS port.
+// Part of the PaperWasp macOS app.
 
 #import <Cocoa/Cocoa.h>
 #include "tab_context_menu.h"

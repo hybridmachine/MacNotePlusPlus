@@ -1,5 +1,5 @@
 // auto_indent.mm — Auto-indentation on Enter + smart brace indentation
-// Part of the Notepad++ macOS port modular refactor.
+// Part of the PaperWasp macOS app.
 
 #include "auto_indent.h"
 #include "npp_constants.h"
