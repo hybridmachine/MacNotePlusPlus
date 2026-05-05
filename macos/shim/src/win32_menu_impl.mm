@@ -7,7 +7,6 @@
 #include "handle_registry.h"
 #include "npp_constants.h"
 #include "win32_string_helpers.h"
-#include "about_dialog.h"
 
 #include <vector>
 
@@ -166,7 +165,6 @@ static HMENU findHmenuForNSMenu(NSMenu* menu);
 @interface Win32MenuTarget : NSObject
 + (instancetype)shared;
 - (void)menuItemClicked:(NSMenuItem*)sender;
-- (void)showAboutPaperWasp:(id)sender;
 @end
 
 @implementation Win32MenuTarget
@@ -201,11 +199,6 @@ static HMENU findHmenuForNSMenu(NSMenu* menu);
 	// Fallback: try SendMessage
 	if (mainWnd)
 		SendMessageW(mainWnd, WM_COMMAND, MAKEWPARAM(cmdId, 0), 0);
-}
-
-- (void)showAboutPaperWasp:(id)sender
-{
-	showAboutDlg();
 }
 
 @end
@@ -398,9 +391,10 @@ BOOL SetMenu(HWND hWnd, HMENU hMenu)
 	NSMenu* appMenu = [[NSMenu alloc] initWithTitle:@"PaperWasp"];
 	appMenu.delegate = [Win32MenuDelegate shared];
 	NSMenuItem* aboutItem = [appMenu addItemWithTitle:@"About PaperWasp"
-	                                          action:@selector(showAboutPaperWasp:)
+	                                          action:@selector(menuItemClicked:)
 	                                   keyEquivalent:@""];
 	[aboutItem setTarget:[Win32MenuTarget shared]];
+	[aboutItem setTag:IDM_HELP_ABOUT];
 	[appMenu addItem:[NSMenuItem separatorItem]];
 	NSMenuItem* quitItem = [appMenu addItemWithTitle:@"Quit PaperWasp" action:@selector(terminate:) keyEquivalent:@"q"];
 	(void)quitItem;

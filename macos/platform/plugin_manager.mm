@@ -356,15 +356,22 @@ bool MacPluginManager::loadPlugins()
 	@autoreleasepool {
 		NSFileManager* fm = [NSFileManager defaultManager];
 
-		// Scan the user plugins directory first, then the bundled PlugIns
-		// directory. A user-installed plugin with the same folder name as a
-		// bundled one wins (lets users override a shipped default).
+		// Scan the PaperWasp user plugins directory first, then the legacy
+		// MacNote++ directory, then bundled PlugIns. Earlier directories win,
+		// so users can override bundled defaults and new installs override
+		// legacy copies with the same folder name.
 		NSString* userDir = [@"~/Library/Application Support/PaperWasp/plugins"
 			stringByExpandingTildeInPath];
 		[fm createDirectoryAtPath:userDir withIntermediateDirectories:YES attributes:nil error:nil];
 
-		NSMutableArray<NSString*>* pluginDirs = [NSMutableArray arrayWithCapacity:2];
+		NSMutableArray<NSString*>* pluginDirs = [NSMutableArray arrayWithCapacity:3];
 		[pluginDirs addObject:userDir];
+
+		NSString* legacyUserDir = [@"~/Library/Application Support/MacNote++/plugins"
+			stringByExpandingTildeInPath];
+		BOOL legacyIsDir = NO;
+		if ([fm fileExistsAtPath:legacyUserDir isDirectory:&legacyIsDir] && legacyIsDir)
+			[pluginDirs addObject:legacyUserDir];
 
 		NSString* bundledDir = [[NSBundle mainBundle] builtInPlugInsPath];
 		if (bundledDir && [fm fileExistsAtPath:bundledDir])
