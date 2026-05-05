@@ -152,7 +152,14 @@ void showAboutDlg()
 			[NSColor secondaryLabelColor],
 			contentWidth);
 		[stack addArrangedSubview:disclaimerLabel];
-		[stack setCustomSpacing:20 afterView:disclaimerLabel];
+
+		NSTextField* productionLabel = makeCenteredLabel(
+			@"Produced and Directed by Brian Tabone, implemented by Codex, Claude, and Copilot",
+			[NSFont systemFontOfSize:12],
+			[NSColor secondaryLabelColor],
+			contentWidth);
+		[stack addArrangedSubview:productionLabel];
+		[stack setCustomSpacing:20 afterView:productionLabel];
 
 		// Separator
 		NSBox* separator = [[NSBox alloc] init];
