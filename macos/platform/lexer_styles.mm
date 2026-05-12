@@ -282,7 +282,23 @@ static const StyleDef s_latexStyles[] = {
 	{9,  0xCC6600, 0xDCDCAA, false, false},   // short command
 };
 
+// Assembly lexer styles (SCE_ASM_*) — used by Assembly (65C02)
+static const StyleDef s_asmStyles[] = {
+	{1,  0x008000, 0x6A9955, false, false},   // COMMENT
+	{2,  0x0080FF, 0xB5CEA8, false, false},   // NUMBER
+	{3,  0x808080, 0xCE9178, false, false},   // STRING
+	{4,  0x800000, 0xD4D4D4, true,  false},   // OPERATOR
+	{6,  0xFF0000, 0x569CD6, true,  false},   // CPU INSTRUCTION
+	{7,  0xC08000, 0x4EC9B0, true,  false},   // MATH INSTRUCTION
+	{8,  0xFF8080, 0xC586C0, true,  false},   // REGISTER
+	{9,  0xFF8000, 0xDCDCAA, false, false},   // DIRECTIVE
+	{10, 0x800000, 0x9CDCFE, true,  false},   // DIRECTIVE OPERAND
+	{12, 0x008080, 0xCE9178, false, false},   // CHARACTER
+	{14, 0x004080, 0xDCDCAA, true,  false},   // EXT INSTRUCTION
+};
+
 static const LexerStyles s_allLexerStyles[] = {
+	{"asm",        s_asmStyles,      sizeof(s_asmStyles) / sizeof(s_asmStyles[0])},
 	{"cpp",        s_cppStyles,      sizeof(s_cppStyles) / sizeof(s_cppStyles[0])},
 	{"objc",       s_objcStyles,     sizeof(s_objcStyles) / sizeof(s_objcStyles[0])},
 	{"python",     s_pythonStyles,   sizeof(s_pythonStyles) / sizeof(s_pythonStyles[0])},
