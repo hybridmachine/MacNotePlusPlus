@@ -858,6 +858,13 @@ protected:
 		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.asm.comment.explicit"), reinterpret_cast<LPARAM>("1"));
 	}
 
+	void setAsm65C02Lexer(){
+		setLexer(L_ASM_65C02, LIST_0 | LIST_1 | LIST_2 | LIST_3 | LIST_4 | LIST_5 | LIST_6 | LIST_7);
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.asm.syntax.based"), reinterpret_cast<LPARAM>("1"));
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.asm.comment.multiline"), reinterpret_cast<LPARAM>("1"));
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.asm.comment.explicit"), reinterpret_cast<LPARAM>("1"));
+	}
+
 	void setDiffLexer(){
 		setLexer(L_DIFF, LIST_NONE);
 	}

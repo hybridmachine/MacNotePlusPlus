@@ -136,6 +136,7 @@ LanguageNameInfo ScintillaEditView::_langNameInfoArray[L_EXTERNAL + 1] = {
 	{L"lisp",             L"Lisp",                   L"List Processing language file",                     L_LISP,            "lisp"},
 	{L"scheme",           L"Scheme",                 L"Scheme file",                                       L_SCHEME,          "lisp"},
 	{L"asm",              L"Assembly",               L"Assembly language source file",                     L_ASM,             "asm"},
+	{L"asm65c02",         L"Assembly (65C02)",       L"WDC 65C02 assembly source file",                    L_ASM_65C02,       "asm65c02"},
 	{L"diff",             L"Diff",                   L"Diff file",                                         L_DIFF,            "diff"},
 	{L"props",            L"Properties file",        L"Properties file",                                   L_PROPS,           "props"},
 	{L"postscript",       L"PostScript",             L"PostScript file",                                   L_PS,              "ps"},
