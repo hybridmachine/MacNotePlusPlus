@@ -333,6 +333,12 @@ void applyLanguageToView(void* sci, int langIndex)
 	ScintillaBridge_sendMessage(sci, SCI_SETKEYWORDS, 0, (intptr_t)lang.keywords);
 	if (lang.keywords2 && lang.keywords2[0])
 		ScintillaBridge_sendMessage(sci, SCI_SETKEYWORDS, 1, (intptr_t)lang.keywords2);
+	for (int i = 0; i < 6; ++i)
+	{
+		const char* kw = lang.keywordsExtra[i];
+		if (kw && kw[0])
+			ScintillaBridge_sendMessage(sci, SCI_SETKEYWORDS, 2 + i, (intptr_t)kw);
+	}
 
 	ScintillaBridge_sendMessage(sci, SCI_SETPROPERTY, (uintptr_t)"fold", (intptr_t)"1");
 	ScintillaBridge_sendMessage(sci, SCI_SETPROPERTY, (uintptr_t)"fold.compact", (intptr_t)"0");
