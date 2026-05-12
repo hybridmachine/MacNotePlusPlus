@@ -4132,6 +4132,8 @@ LangType Notepad_plus::menuID2LangType(int cmdID)
             return L_SAS;
         case IDM_LANG_ERRORLIST:
             return L_ERRORLIST;
+        case IDM_LANG_ASM_65C02:
+            return L_ASM_65C02;
         case IDM_LANG_USER:
             return L_USER;
 		default:
