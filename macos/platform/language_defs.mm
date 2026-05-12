@@ -240,6 +240,35 @@ const LangDef g_languages[] = {
 	 "include input maketitle tableofcontents textbf textit emph underline",
 	 "article report book letter beamer memoir standalone",
 	 IDM_LANG_BASE + LANG_LATEX},
+	{"Assembly (65C02)", "asm",
+	 // keywords (set 0, CPU INSTRUCTION): NMOS 6502 + CMOS 65C02 + WDC (WAI/STP) + Rockwell (SMB/RMB/BBR/BBS)
+	 "adc and asl bcc bcs beq bit bmi bne bpl brk bvc bvs clc cld cli clv cmp cpx cpy "
+	 "dec dex dey eor inc inx iny jmp jsr lda ldx ldy lsr nop ora pha php pla plp rol "
+	 "ror rti rts sbc sec sed sei sta stx sty tax tay tsx txa txs tya "
+	 "bra phx phy plx ply stz trb tsb wai stp "
+	 "smb0 smb1 smb2 smb3 smb4 smb5 smb6 smb7 "
+	 "rmb0 rmb1 rmb2 rmb3 rmb4 rmb5 rmb6 rmb7 "
+	 "bbr0 bbr1 bbr2 bbr3 bbr4 bbr5 bbr6 bbr7 "
+	 "bbs0 bbs1 bbs2 bbs3 bbs4 bbs5 bbs6 bbs7",
+	 // keywords2 (set 1, MATH INSTRUCTION): empty — no FPU on 65C02
+	 "",
+	 IDM_LANG_BASE + LANG_ASM_65C02,
+	 {
+		 // set 2, REGISTER (type1)
+		 "a x y s sp p pc",
+		 // set 3, DIRECTIVE (type2): WDC Assembler/Linker directives
+		 "equ db dw dd ds fill org chip endasm end include import export extern global "
+		 "public record macro mend mexit mlist mnolist if ifdef ifndef else elseif endif "
+		 "list nolist title subttl page lf clrlst radix code data bss udata dpage ipage",
+		 // set 4, DIRECTIVE OPERAND (type3) — unused in v1
+		 "",
+		 // set 5, EXT INSTRUCTION (type4) — unused in v1
+		 "",
+		 // set 6, FOLD OPEN (type5) — must also appear in directives
+		 "macro if ifdef ifndef",
+		 // set 7, FOLD CLOSE (type6) — must also appear in directives
+		 "mend endif",
+	 }},
 };
 const int g_numLanguages = sizeof(g_languages) / sizeof(g_languages[0]);
 
@@ -334,6 +363,9 @@ int guessLanguage(const std::wstring& filePath)
 	if ([ext isEqualToString:@"tex"] || [ext isEqualToString:@"latex"] ||
 	    [ext isEqualToString:@"sty"] || [ext isEqualToString:@"cls"])
 		return LANG_LATEX;
+	if ([ext isEqualToString:@"asm"] || [ext isEqualToString:@"a65"] ||
+	    [ext isEqualToString:@"s65"])
+		return LANG_ASM_65C02;
 
 	return LANG_NORMAL_TEXT;
 }

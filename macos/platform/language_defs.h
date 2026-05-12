@@ -50,6 +50,7 @@ constexpr int LANG_R = 30;
 constexpr int LANG_KOTLIN = 31;
 constexpr int LANG_SCALA = 32;
 constexpr int LANG_LATEX = 33;
+constexpr int LANG_ASM_65C02 = 34;
 
 extern const LangDef g_languages[];
 extern const int g_numLanguages;
