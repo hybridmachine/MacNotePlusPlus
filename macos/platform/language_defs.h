@@ -12,6 +12,7 @@ struct LangDef
 	const char* keywords;      // Primary keywords (set 0)
 	const char* keywords2;     // Secondary keywords (set 1) - types, builtins
 	int menuId;                // Menu command ID
+	const char* keywordsExtra[6]; // Sets 2-7. Null-init means "not used". Required for lexers (e.g. LexAsm) that consume more than two word lists.
 };
 
 // Named language indices for type-safe references
@@ -49,6 +50,7 @@ constexpr int LANG_R = 30;
 constexpr int LANG_KOTLIN = 31;
 constexpr int LANG_SCALA = 32;
 constexpr int LANG_LATEX = 33;
+constexpr int LANG_ASM_65C02 = 34;
 
 extern const LangDef g_languages[];
 extern const int g_numLanguages;

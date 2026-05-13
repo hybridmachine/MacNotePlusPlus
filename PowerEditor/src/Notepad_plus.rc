@@ -1001,6 +1001,7 @@ BEGIN
         MENUITEM "ASN.1",                   IDM_LANG_ASN1
         MENUITEM "ASP",                     IDM_LANG_ASP
         MENUITEM "Assembly",                IDM_LANG_ASM
+        MENUITEM "Assembly (65C02)",        IDM_LANG_ASM_65C02
         MENUITEM "AutoIt",                  IDM_LANG_AU3
         MENUITEM "AviSynth",                IDM_LANG_AVS
         MENUITEM "BaanC",                   IDM_LANG_BAANC
@@ -1105,6 +1106,7 @@ BEGIN
         MENUITEM "ASN.1",                 IDM_LANG_ASN1
         MENUITEM "ASP",                   IDM_LANG_ASP
         MENUITEM "Assembly",              IDM_LANG_ASM
+        MENUITEM "Assembly (65C02)",      IDM_LANG_ASM_65C02
         MENUITEM "AutoIt",                IDM_LANG_AU3
         MENUITEM "AviSynth",              IDM_LANG_AVS
     END
