@@ -18,6 +18,10 @@ struct AppSettings
 	int fontSize = 13;
 	int tabWidth = 4;
 
+	// Default assembly dialect for .asm files. Values: "x86" or "65c02".
+	// .a65/.s65 are always treated as 65C02 regardless of this setting.
+	std::string asmDefault = "x86";
+
 	// View state
 	bool wordWrap = false;
 	bool showLineNumbers = true;
