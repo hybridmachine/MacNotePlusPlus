@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 #include "language_defs.h"
 #include "npp_constants.h"
+#include "settings_manager.h"
 #include "string_utils.h"
 
 const LangDef g_languages[] = {
@@ -269,6 +270,67 @@ const LangDef g_languages[] = {
 		 // set 7, FOLD CLOSE (type6) — must also appear in directives
 		 "mend endif",
 	 }},
+	{"Assembly (x86)", "asm",
+	 // keywords (set 0, CPU INSTRUCTION): common x86/x86_64 mnemonics (NASM/MASM/GAS-Intel)
+	 "aaa aad aam aas adc add and call cbw clc cld cli cmc cmp cmps cmpsb cmpsw cmpsd cwd "
+	 "daa das dec div esc hlt idiv imul in inc int into iret iretd ja jae jb jbe jc jcxz "
+	 "je jecxz jg jge jl jle jmp jna jnae jnb jnbe jnc jne jng jnge jnl jnle jno jnp jns "
+	 "jnz jo jp jpe jpo js jz lahf lds lea leave les lock lods lodsb lodsw lodsd loop loope "
+	 "loopne loopnz loopz mov movs movsb movsw movsd movsx movzx mul neg nop not or out pop "
+	 "popa popad popf popfd push pusha pushad pushf pushfd rcl rcr rep repe repne repnz repz "
+	 "ret retf rol ror sahf sal sar sbb scas scasb scasw scasd shl shr stc std sti stos stosb "
+	 "stosw stosd sub test wait xchg xlat xor "
+	 // SSE/AVX scalar essentials
+	 "movss movsd movaps movups movapd movupd addss addsd subss subsd mulss mulsd divss divsd "
+	 "sqrtss sqrtsd cmpss cmpsd ucomiss ucomisd cvtsi2ss cvtsi2sd cvtss2si cvtsd2si "
+	 "vmovss vmovsd vaddss vaddsd vsubss vsubsd vmulss vmulsd vdivss vdivsd "
+	 // x86_64 extras
+	 "cdqe cqo movsxd syscall sysret swapgs",
+	 // keywords2 (set 1, MATH INSTRUCTION): x87 FPU
+	 "f2xm1 fabs fadd faddp fbld fbstp fchs fclex fcom fcomp fcompp fcos fdecstp fdisi fdiv "
+	 "fdivp fdivr fdivrp feni ffree fiadd ficom ficomp fidiv fidivr fild fimul fincstp finit "
+	 "fist fistp fisub fisubr fld fld1 fldcw fldenv fldl2e fldl2t fldlg2 fldln2 fldpi fldz "
+	 "fmul fmulp fnclex fndisi fneni fninit fnop fnsave fnstcw fnstenv fnstsw fpatan fprem "
+	 "fprem1 fptan frndint frstor fsave fscale fsetpm fsin fsincos fsqrt fst fstcw fstenv "
+	 "fstp fstsw fsub fsubp fsubr fsubrp ftst fucom fucomp fucompp fwait fxam fxch fxtract "
+	 "fyl2x fyl2xp1",
+	 IDM_LANG_BASE + LANG_ASM_X86,
+	 {
+		 // set 2, REGISTER (type1): 8/16/32/64-bit GPRs + segment + control + x87/SSE/AVX
+		 "al ah bl bh cl ch dl dh ax bx cx dx si di bp sp ip "
+		 "eax ebx ecx edx esi edi ebp esp eip "
+		 "rax rbx rcx rdx rsi rdi rbp rsp rip "
+		 "r8 r9 r10 r11 r12 r13 r14 r15 "
+		 "r8b r9b r10b r11b r12b r13b r14b r15b "
+		 "r8w r9w r10w r11w r12w r13w r14w r15w "
+		 "r8d r9d r10d r11d r12d r13d r14d r15d "
+		 "cs ds es fs gs ss "
+		 "cr0 cr2 cr3 cr4 cr8 dr0 dr1 dr2 dr3 dr6 dr7 "
+		 "st st0 st1 st2 st3 st4 st5 st6 st7 "
+		 "mm0 mm1 mm2 mm3 mm4 mm5 mm6 mm7 "
+		 "xmm0 xmm1 xmm2 xmm3 xmm4 xmm5 xmm6 xmm7 xmm8 xmm9 xmm10 xmm11 xmm12 xmm13 xmm14 xmm15 "
+		 "ymm0 ymm1 ymm2 ymm3 ymm4 ymm5 ymm6 ymm7 ymm8 ymm9 ymm10 ymm11 ymm12 ymm13 ymm14 ymm15",
+		 // set 3, DIRECTIVE (type2): NASM/MASM/GAS-Intel common directives
+		 "section segment ends global extern public common org bits use16 use32 use64 cpu "
+		 "db dw dd dq dt do ddq dqword resb resw resd resq rest reso resy "
+		 "equ times incbin include %include %define %undef %macro %endmacro %if %ifdef %ifndef "
+		 "%else %elif %endif %rep %endrep %assign %strcat %strlen %substr "
+		 ".text .data .bss .rodata .global .globl .extern .section .align .ascii .asciz .string "
+		 "proc endp end struct ends union assume model stack code data "
+		 "byte word dword qword tbyte real4 real8 real10 ptr offset short near far "
+		 "macro endm if ifdef ifndef ifb ifnb ifidn ifidni ifdif ifdifi ife else elseif endif",
+		 // set 4, DIRECTIVE OPERAND (type3) — unused
+		 "",
+		 // set 5, EXT INSTRUCTION (type4): MMX/SSE/AVX/AVX-512 (subset)
+		 "movd movq paddb paddw paddd paddq psubb psubw psubd psubq pmullw pmulhw pand por pxor "
+		 "pcmpeqb pcmpeqw pcmpeqd packsswb packssdw packuswb pshufb pshufw pshufd shufps shufpd "
+		 "vpaddb vpaddw vpaddd vpaddq vpsubb vpsubw vpsubd vpsubq vpand vpor vpxor vmovdqa vmovdqu "
+		 "vshufps vshufpd vbroadcastss vbroadcastsd vinsertf128 vextractf128 vzeroupper vzeroall",
+		 // set 6, FOLD OPEN (type5)
+		 "macro proc struct segment if ifdef ifndef %macro %if %ifdef %ifndef",
+		 // set 7, FOLD CLOSE (type6)
+		 "endm endp ends endif %endmacro %endif",
+	 }},
 };
 const int g_numLanguages = sizeof(g_languages) / sizeof(g_languages[0]);
 
@@ -363,9 +425,13 @@ int guessLanguage(const std::wstring& filePath)
 	if ([ext isEqualToString:@"tex"] || [ext isEqualToString:@"latex"] ||
 	    [ext isEqualToString:@"sty"] || [ext isEqualToString:@"cls"])
 		return LANG_LATEX;
-	if ([ext isEqualToString:@"asm"] || [ext isEqualToString:@"a65"] ||
-	    [ext isEqualToString:@"s65"])
+	if ([ext isEqualToString:@"a65"] || [ext isEqualToString:@"s65"])
 		return LANG_ASM_65C02;
+	if ([ext isEqualToString:@"asm"])
+	{
+		const std::string& dialect = SettingsManager::instance().settings.asmDefault;
+		return (dialect == "65c02") ? LANG_ASM_65C02 : LANG_ASM_X86;
+	}
 
 	return LANG_NORMAL_TEXT;
 }

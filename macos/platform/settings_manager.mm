@@ -70,6 +70,12 @@ bool SettingsManager::load()
 	}
 	if ([json[@"fontSize"] isKindOfClass:[NSNumber class]])  settings.fontSize = [json[@"fontSize"] intValue];
 	if ([json[@"tabWidth"] isKindOfClass:[NSNumber class]])  settings.tabWidth = [json[@"tabWidth"] intValue];
+	if ([json[@"asmDefault"] isKindOfClass:[NSString class]])
+	{
+		const char* val = [json[@"asmDefault"] UTF8String];
+		if (val && (std::string(val) == "x86" || std::string(val) == "65c02"))
+			settings.asmDefault = val;
+	}
 
 	// View state
 	if ([json[@"wordWrap"] isKindOfClass:[NSNumber class]])        settings.wordWrap = [json[@"wordWrap"] boolValue];
@@ -182,6 +188,7 @@ bool SettingsManager::save()
 		@"fontName":     fontName,
 		@"fontSize":     @(settings.fontSize),
 		@"tabWidth":     @(settings.tabWidth),
+		@"asmDefault":   [NSString stringWithUTF8String:settings.asmDefault.c_str()] ?: @"x86",
 		@"wordWrap":     @(settings.wordWrap),
 		@"showLineNumbers": @(settings.showLineNumbers),
 		@"showCaretLine": @(settings.showCaretLine),

@@ -9,11 +9,12 @@
 #include "appearance.h"
 #include "scintilla_bridge.h"
 #include "settings_manager.h"
+#include "language_defs.h"
 
 void showPreferencesDlg()
 {
 	@autoreleasepool {
-		NSPanel* panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 380, 330)
+		NSPanel* panel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 380, 370)
 		                                    styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
 		                                    backing:NSBackingStoreBuffered
 		                                    defer:NO];
@@ -21,6 +22,33 @@ void showPreferencesDlg()
 		[panel center];
 
 		NSView* content = panel.contentView;
+
+		NSTextField* asmLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 305, 130, 20)];
+		asmLabel.stringValue = @".asm files:";
+		asmLabel.bezeled = NO;
+		asmLabel.drawsBackground = NO;
+		asmLabel.editable = NO;
+		asmLabel.selectable = NO;
+		[content addSubview:asmLabel];
+
+		NSPopUpButton* asmPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(150, 302, 210, 26) pullsDown:NO];
+		[asmPopup addItemWithTitle:@"Assembly (x86)"];
+		[asmPopup addItemWithTitle:@"Assembly (65C02)"];
+		{
+			const std::string& dialect = SettingsManager::instance().settings.asmDefault;
+			[asmPopup selectItemAtIndex:(dialect == "65c02") ? 1 : 0];
+		}
+		[content addSubview:asmPopup];
+
+		NSTextField* asmHelp = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 273, 340, 18)];
+		asmHelp.stringValue = @"(.a65 and .s65 are always 65C02.)";
+		asmHelp.bezeled = NO;
+		asmHelp.drawsBackground = NO;
+		asmHelp.editable = NO;
+		asmHelp.selectable = NO;
+		asmHelp.textColor = [NSColor secondaryLabelColor];
+		asmHelp.font = [NSFont systemFontOfSize:11];
+		[content addSubview:asmHelp];
 
 		NSTextField* fontLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 225, 100, 20)];
 		fontLabel.stringValue = @"Font:";
@@ -133,6 +161,10 @@ void showPreferencesDlg()
 			ctx().autoIndent = (autoIndentCheck.state == NSControlStateValueOn);
 			ctx().useTabs = (useTabsCheck.state == NSControlStateValueOn);
 
+			std::string newAsmDefault = (asmPopup.indexOfSelectedItem == 1) ? "65c02" : "x86";
+			std::string oldAsmDefault = SettingsManager::instance().settings.asmDefault;
+			SettingsManager::instance().settings.asmDefault = newAsmDefault;
+
 			void* views[] = { ctx().scintillaView, ctx().scintillaView2 };
 			for (void* sci : views)
 			{
@@ -145,6 +177,25 @@ void showPreferencesDlg()
 			}
 
 			applyAppearance();
+
+			// If the .asm dialect changed, re-detect language on any open .asm documents
+			// (auto-detected as Assembly), but preserve any manually-overridden language.
+			if (newAsmDefault != oldAsmDefault)
+			{
+				auto retagAsm = [](std::vector<DocumentData>& docs) {
+					for (auto& doc : docs)
+					{
+						if (doc.filePath.empty()) continue;
+						if (doc.languageIndex != LANG_ASM_X86 && doc.languageIndex != LANG_ASM_65C02)
+							continue;
+						int detected = guessLanguage(doc.filePath);
+						if (detected == LANG_ASM_X86 || detected == LANG_ASM_65C02)
+							doc.languageIndex = detected;
+					}
+				};
+				retagAsm(ctx().documents);
+				retagAsm(ctx().documents2);
+			}
 
 			if (ctx().activeTab >= 0 && ctx().activeTab < static_cast<int>(ctx().documents.size()))
 				applyLanguageToView(ctx().scintillaView, ctx().documents[ctx().activeTab].languageIndex);
@@ -159,6 +210,7 @@ void showPreferencesDlg()
 			ss.showCaretLine = ctx().showCaretLine;
 			ss.autoIndent = ctx().autoIndent;
 			ss.useTabs = ctx().useTabs;
+			// asmDefault already set above
 			SettingsManager::instance().save();
 		}
 
