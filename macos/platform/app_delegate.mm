@@ -26,6 +26,8 @@
 #include "file_monitor_mac.h"
 #include "brace_match.h"
 #include "smart_highlight.h"
+#include "age_bar_view.h"
+#include "follow_mode.h"
 #include "auto_indent.h"
 #include "auto_close.h"
 #include "sync_scroll.h"
@@ -143,6 +145,12 @@ static void setDockIconFromLogo()
 	ctx().rightPanelWidth = s.rightPanelWidth;
 	ctx().functionListHeightRatio = s.functionListHeightRatio;
 	ctx().documentMapWidth = s.documentMapWidth;
+	ctx().followColorNew = s.followColorNew;
+	ctx().followColorMedium = s.followColorMedium;
+	ctx().followColorOld = s.followColorOld;
+	ctx().followThresholdNewSec = s.followThresholdNewSec;
+	ctx().followThresholdMediumSec = s.followThresholdMediumSec;
+	ctx().followThresholdOldSec = s.followThresholdOldSec;
 	setDockIconFromLogo();
 
 	ctx().recentFiles.clear();
@@ -243,8 +251,10 @@ static void setDockIconFromLogo()
 	}
 
 	NSRect editorFrame = NSMakeRect(0, statusHeight, contentView.bounds.size.width, editorHeight);
-	ctx().editorContainer = [[NSView alloc] initWithFrame:editorFrame];
-	ctx().editorContainer.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+	NppEditorContainer* mainContainer = [[NppEditorContainer alloc] initWithFrame:editorFrame];
+	mainContainer.viewIndex = 0;
+	mainContainer.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+	ctx().editorContainer = mainContainer;
 	[contentView addSubview:ctx().editorContainer];
 
 	ctx().scintillaView = ScintillaBridge_createView((__bridge void*)ctx().editorContainer, 0, 0, 0, 0);
@@ -253,6 +263,7 @@ static void setDockIconFromLogo()
 		NSLog(@"ERROR: Failed to create ScintillaView!");
 		return;
 	}
+	mainContainer.scintillaChild = (__bridge NSView*)ctx().scintillaView;
 
 	// Register main Scintilla view with HandleRegistry so SendMessage(sciHandle, SCI_*, ...) works
 	{
@@ -356,6 +367,8 @@ static void setDockIconFromLogo()
 						scheduleSmartHighlight(ctx().scintillaView);
 					handleSyncScrollUpdate(ctx().scintillaView, scn->updated);
 					handleDocumentMapUpdateUI(ctx().scintillaView, scn->updated);
+					if (scn->updated & SC_UPDATE_V_SCROLL)
+						invalidateAgeBarForView(0);
 				}
 				else if (scn->nmhdr.code == SCN_CHARADDED)
 				{
@@ -375,6 +388,8 @@ static void setDockIconFromLogo()
 				{
 					if (scn->linesAdded != 0)
 						refreshLineNumberMargin(ctx().scintillaView);
+
+					handleFollowModified(0, scn);
 
 					if (ctx().autoCloseBrackets)
 					{

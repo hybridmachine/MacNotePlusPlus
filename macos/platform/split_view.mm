@@ -21,6 +21,8 @@
 #include "document_map.h"
 #include "function_list_panel.h"
 #include "panel_layout.h"
+#include "age_bar_view.h"
+#include "follow_mode.h"
 #include "file_switcher_panel.h"
 #include "scintilla_notify.h"
 #include "plugin_manager.h"
@@ -114,8 +116,10 @@ void doSplit()
 	[ctx().splitView addArrangedSubview:ctx().editorContainer];
 
 	NSRect rightFrame = NSMakeRect(0, 0, ctx().splitView.frame.size.width / 2, ctx().splitView.frame.size.height);
-	ctx().editorContainer2 = [[NSView alloc] initWithFrame:rightFrame];
-	ctx().editorContainer2.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+	NppEditorContainer* rightContainer = [[NppEditorContainer alloc] initWithFrame:rightFrame];
+	rightContainer.viewIndex = 1;
+	rightContainer.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+	ctx().editorContainer2 = rightContainer;
 	[ctx().splitView addArrangedSubview:ctx().editorContainer2];
 
 	CGFloat containerHeight = rightFrame.size.height;
@@ -133,6 +137,8 @@ void doSplit()
 	ctx().sciContainer2 = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, containerWidth, containerHeight)];
 	ctx().sciContainer2.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 	[ctx().editorContainer2 addSubview:ctx().sciContainer2];
+	rightContainer.scintillaChild = ctx().sciContainer2;
+	[rightContainer applyLayout];
 
 	// Reuse the pre-created second Scintilla view (created hidden at startup for plugin compatibility)
 	if (ctx().scintillaView2)
@@ -246,6 +252,8 @@ void doSplit()
 								scheduleSmartHighlight(ctx().scintillaView2);
 							handleSyncScrollUpdate(ctx().scintillaView2, scn->updated);
 							handleDocumentMapUpdateUI(ctx().scintillaView2, scn->updated);
+							if (scn->updated & SC_UPDATE_V_SCROLL)
+								invalidateAgeBarForView(1);
 						}
 					}
 					else if (scn->nmhdr.code == SCN_CHARADDED)
@@ -265,6 +273,8 @@ void doSplit()
 					{
 						if (scn->linesAdded != 0)
 							refreshLineNumberMargin(ctx().scintillaView2);
+
+						handleFollowModified(1, scn);
 
 						if (ctx().scintillaView2 && ctx().autoCloseBrackets)
 						{

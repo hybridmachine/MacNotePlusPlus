@@ -61,6 +61,12 @@ struct DocumentData
 	uint64_t functionListDocumentId = 0;
 	uint64_t functionListRevision = 0;
 	uint64_t bufferId = 0; // Stable buffer ID for plugin API (NPPM_GETCURRENTBUFFERID etc.)
+
+	// Follow Mode: tail-follow external file changes; render per-line age heatmap.
+	bool followMode = false;
+	std::vector<uint64_t> lineBirthTimes; // monotonic ms per line index
+	uint64_t lastKnownFileSize = 0;       // last on-disk size we've observed
+	bool followSuspended = false;         // true when external change arrived while dirty
 };
 
 // Allocate a unique buffer ID (monotonic, never reused)
