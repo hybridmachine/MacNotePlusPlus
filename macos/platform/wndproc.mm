@@ -56,6 +56,23 @@ void updateSynchronizeScrollingMenu(HWND hWnd)
 	}
 }
 
+bool activeDocumentFollowMode()
+{
+	auto& docs = (ctx().activeView == 0) ? ctx().documents : ctx().documents2;
+	int tab = (ctx().activeView == 0) ? ctx().activeTab : ctx().activeTab2;
+	return tab >= 0 && tab < (int)docs.size() && docs[tab].followMode;
+}
+
+void updateFollowModeMenu(HWND hWnd)
+{
+	HMENU hMenu = GetMenu(hWnd);
+	if (hMenu)
+	{
+		CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
+		              MF_BYCOMMAND | (activeDocumentFollowMode() ? MF_CHECKED : MF_UNCHECKED));
+	}
+}
+
 void togglePluginVerticalSync(HWND hWnd)
 {
 	if (!ctx().isSplit)
@@ -677,15 +694,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			case IDM_VIEW_FOLLOW:
 			{
 				toggleFollowModeForActiveTab(ctx().activeView);
-				HMENU hMenu = GetMenu(hWnd);
-				if (hMenu)
-				{
-					int tab = (ctx().activeView == 0) ? ctx().activeTab : ctx().activeTab2;
-					auto& docs = (ctx().activeView == 0) ? ctx().documents : ctx().documents2;
-					bool on = (tab >= 0 && tab < (int)docs.size() && docs[tab].followMode);
-					CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
-					              MF_BYCOMMAND | (on ? MF_CHECKED : MF_UNCHECKED));
-				}
+				updateFollowModeMenu(hWnd);
 				return 0;
 			}
 			case IDM_FILE_OPENFOLDER:
@@ -860,6 +869,8 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					              MF_BYCOMMAND | (ctx().syncScrolling && ctx().isSplit ? MF_CHECKED : MF_UNCHECKED));
 					CheckMenuItem(hMenu, IDM_VIEW_CHANGE_HISTORY,
 					              MF_BYCOMMAND | (ctx().showChangeHistory ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
+					              MF_BYCOMMAND | (activeDocumentFollowMode() ? MF_CHECKED : MF_UNCHECKED));
 				}
 			}
 			updateFilePathMenuState();

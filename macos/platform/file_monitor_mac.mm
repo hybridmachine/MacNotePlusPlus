@@ -10,6 +10,8 @@
 #include <vector>
 #include <string>
 
+struct FileWatchContext;
+
 // Helper: wchar_t (UTF-32) → NSString → std::string (UTF-8)
 static std::string WideToUTF8(const std::wstring& ws)
 {
@@ -48,7 +50,7 @@ struct FileMonitorMac::Impl
 	std::vector<FSEventStreamRef> fileStreams;
 	std::vector<std::wstring> watchedFiles;
 	std::vector<FileMonitorCallback> fileCallbacks;
-	std::vector<void*> fileContexts;
+	std::vector<FileWatchContext*> fileContexts;
 
 	bool terminated = false;
 };
@@ -100,7 +102,7 @@ static void fseventsCallback(ConstFSEventStreamRef streamRef,
 struct FileWatchContext
 {
 	FileMonitorMac::Impl* impl;
-	FileMonitorCallback callback;
+	std::wstring watchedPath;
 };
 
 static void fileWatchCallback(ConstFSEventStreamRef /*streamRef*/,
@@ -131,8 +133,28 @@ static void fileWatchCallback(ConstFSEventStreamRef /*streamRef*/,
 		NSString* nsPath = (__bridge NSString*)cfPath;
 		std::wstring widePath = UTF8ToWide([nsPath UTF8String]);
 
-		if (fwc && fwc->callback)
-			fwc->callback(action, widePath);
+		FileMonitorCallback globalCallback;
+		FileMonitorCallback fileCallback;
+		if (fwc && fwc->impl)
+		{
+			std::lock_guard<std::mutex> lock(fwc->impl->mutex);
+			fwc->impl->eventQueue.push({action, widePath});
+			globalCallback = fwc->impl->callback;
+
+			for (size_t j = 0; j < fwc->impl->watchedFiles.size(); ++j)
+			{
+				if (fwc->impl->watchedFiles[j] == fwc->watchedPath)
+				{
+					fileCallback = fwc->impl->fileCallbacks[j];
+					break;
+				}
+			}
+		}
+
+		if (globalCallback)
+			globalCallback(action, widePath);
+		if (fileCallback)
+			fileCallback(action, widePath);
 	}
 }
 
@@ -226,9 +248,9 @@ bool FileMonitorMac::addFilePath(const std::wstring& path, FileMonitorCallback c
 	CFStringRef cfPath = (__bridge CFStringRef)nsPath;
 	CFArrayRef pathsToWatch = CFArrayCreate(nullptr, (const void**)&cfPath, 1, &kCFTypeArrayCallBacks);
 
-	// Heap-allocated context: per-file callback survives for the stream's lifetime.
+	// Heap-allocated context: identifies which watched file this stream belongs to.
 	// Freed in removeFilePath()/terminate().
-	auto* fwc = new FileWatchContext{m_impl, callback};
+	auto* fwc = new FileWatchContext{m_impl, path};
 
 	FSEventStreamContext context = {};
 	context.info = fwc;
@@ -274,7 +296,7 @@ void FileMonitorMac::removeFilePath(const std::wstring& path)
 			if (m_impl->watchedFiles[i] == path)
 			{
 				streamToStop = m_impl->fileStreams[i];
-				ctxToFree = static_cast<FileWatchContext*>(m_impl->fileContexts[i]);
+				ctxToFree = m_impl->fileContexts[i];
 				m_impl->fileStreams.erase(m_impl->fileStreams.begin() + i);
 				m_impl->watchedFiles.erase(m_impl->watchedFiles.begin() + i);
 				m_impl->fileCallbacks.erase(m_impl->fileCallbacks.begin() + i);
@@ -329,8 +351,7 @@ void FileMonitorMac::terminate()
 		m_impl->watchedPaths.clear();
 
 		fileStreamsToStop = std::move(m_impl->fileStreams);
-		for (void* p : m_impl->fileContexts)
-			fileContextsToFree.push_back(static_cast<FileWatchContext*>(p));
+		fileContextsToFree = std::move(m_impl->fileContexts);
 		m_impl->fileStreams.clear();
 		m_impl->watchedFiles.clear();
 		m_impl->fileCallbacks.clear();

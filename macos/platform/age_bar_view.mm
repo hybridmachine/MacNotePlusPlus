@@ -25,19 +25,19 @@ const CGFloat kNppAgeBarWidth = 14.0;
 // fade smoothly without per-keystroke invalidation.
 // ---------------------------------------------------------------------------
 
-static NSMutableArray<NppAgeBarView*>* sLiveBars = nil;
+static NSHashTable<NppAgeBarView*>* sLiveBars = nil;
 static NSTimer* sTickTimer = nil;
 
 static void ensureBarRegistry()
 {
 	if (!sLiveBars)
-		sLiveBars = [NSMutableArray array];
+		sLiveBars = [NSHashTable weakObjectsHashTable];
 }
 
 static void onTick()
 {
 	if (!sLiveBars) return;
-	for (NppAgeBarView* bar in sLiveBars)
+	for (NppAgeBarView* bar in sLiveBars.allObjects)
 	{
 		if (!bar.hidden && bar.window)
 			[bar setNeedsDisplay:YES];
@@ -56,7 +56,7 @@ static void stopTimerIfIdle()
 {
 	if (!sTickTimer) return;
 	BOOL anyVisible = NO;
-	for (NppAgeBarView* bar in sLiveBars)
+	for (NppAgeBarView* bar in sLiveBars.allObjects)
 	{
 		if (!bar.hidden && bar.window) { anyVisible = YES; break; }
 	}
@@ -70,14 +70,14 @@ static void stopTimerIfIdle()
 void invalidateAllAgeBars(void)
 {
 	if (!sLiveBars) return;
-	for (NppAgeBarView* bar in sLiveBars)
+	for (NppAgeBarView* bar in sLiveBars.allObjects)
 		[bar setNeedsDisplay:YES];
 }
 
 void invalidateAgeBarForView(int viewIndex)
 {
 	if (!sLiveBars) return;
-	for (NppAgeBarView* bar in sLiveBars)
+	for (NppAgeBarView* bar in sLiveBars.allObjects)
 	{
 		if (bar.viewIndex == viewIndex && !bar.hidden)
 			[bar setNeedsDisplay:YES];
