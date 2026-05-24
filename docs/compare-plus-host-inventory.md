@@ -47,8 +47,8 @@ ComparePlus can continue, but there is no equivalent visible macOS UI surface ye
 | `NPPM_GETCURRENTCMDLINE` | Compare.cpp (checkCmdLine) | **IMPLEMENTED** (nppm_handler.mm, returns empty command line) |
 | `NPPM_GETCURRENTNATIVELANGENCODING` | NppHelpers.h | **IMPLEMENTED** (nppm_handler.mm, returns UTF-8) |
 | `NPPN_GLOBALMODIFIED` | Compare.cpp | **NOT EMITTED** |
-| `NPPN_DARKMODECHANGED` | Compare.cpp | **NOT EMITTED** |
-| `NPPN_WORDSTYLESUPDATED` | Compare.cpp | **NOT EMITTED** |
+| `NPPN_DARKMODECHANGED` | Compare.cpp | **EMITTED** (app_delegate.mm `appearanceChanged:`) |
+| `NPPN_WORDSTYLESUPDATED` | Compare.cpp | **NOT EMITTED** (no host style-configurator UI yet to drive it; ComparePlus handles it identically to `NPPN_DARKMODECHANGED`, so dark-mode toggles already refresh its colors) |
 
 ## Command Alias / Navigation Surface
 
@@ -90,4 +90,5 @@ SETLINENUMBERWIDTHMODE, GETBOOKMARKID, GETNATIVELANGFILENAME, GETCURRENTCMDLINE,
 GETCURRENTNATIVELANGENCODING
 
 NPPN: NPPN_READY, NPPN_SHUTDOWN, NPPN_LANGCHANGED, NPPN_FILEBEFORECLOSE, NPPN_FILESAVED,
-NPPN_FILEOPENED, NPPN_FILECLOSED, NPPN_BUFFERACTIVATED, NPPN_BEFORESHUTDOWN, NPPN_TBMODIFICATION
+NPPN_FILEOPENED, NPPN_FILECLOSED, NPPN_BUFFERACTIVATED, NPPN_BEFORESHUTDOWN, NPPN_TBMODIFICATION,
+NPPN_DARKMODECHANGED
