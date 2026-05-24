@@ -236,9 +236,10 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		case NPPM_GETEDITORDEFAULTBACKGROUNDCOLOR:
 			// Returned as 0x00BBGGRR (Win32 COLORREF). Must match the
-			// Scintilla default-style background actually painted (see
-			// appearance.mm:33), or plugins derive marker shades against
-			// the wrong base — ComparePlus's "blank" marker in particular.
+			// background Scintilla paints for style 32 in
+			// applyAppearanceToView (SCI_STYLESETBACK), or plugins derive
+			// marker shades against the wrong base — ComparePlus's "blank"
+			// marker in particular.
 			return isAppDarkMode() ? 0x001E1E1E : 0x00FFFFFF;
 
 		case NPPM_GETEDITORDEFAULTFOREGROUNDCOLOR:
