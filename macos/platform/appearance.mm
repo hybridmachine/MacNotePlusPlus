@@ -13,6 +13,13 @@
 #include "smart_highlight.h"
 #include "change_history.h"
 
+bool isAppDarkMode()
+{
+	NSAppearanceName appearanceName = [NSApp.effectiveAppearance
+		bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]];
+	return [appearanceName isEqualToString:NSAppearanceNameDarkAqua];
+}
+
 void applyFoldMarkerColorsToView(void* sci, bool isDark)
 {
 	if (!sci) return;
@@ -78,9 +85,7 @@ void applyAppearance()
 {
 	if (!ctx().scintillaView) return;
 
-	NSAppearanceName appearanceName = [NSApp.effectiveAppearance
-		bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]];
-	bool isDark = [appearanceName isEqualToString:NSAppearanceNameDarkAqua];
+	bool isDark = isAppDarkMode();
 
 	int langIdx = 0;
 	if (ctx().activeTab >= 0 && ctx().activeTab < static_cast<int>(ctx().documents.size()))

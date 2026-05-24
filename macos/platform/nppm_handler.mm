@@ -12,6 +12,7 @@
 #include "menu_builder.h"
 #include "string_utils.h"
 #include "compare_plus_visibility.h"
+#include "appearance.h"
 #include "Notepad_plus_msgs.h"
 #include "Scintilla.h"
 
@@ -234,21 +235,21 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 
 		case NPPM_GETEDITORDEFAULTBACKGROUNDCOLOR:
-			// Returned as 0x00BBGGRR (Win32 COLORREF). White matches our
-			// default light-mode Scintilla background. Plugins derive
-			// dependent colors (ComparePlus's "blank" marker shade) from
-			// this; returning 0 / black made the whole diff wash read as
-			// near-black, hiding the actual marker colors.
-			// TODO Phase 5: dark-mode branch.
-			return 0x00FFFFFF;
+			// Returned as 0x00BBGGRR (Win32 COLORREF). Must match the
+			// background Scintilla paints for style 32 in
+			// applyAppearanceToView (SCI_STYLESETBACK), or plugins derive
+			// marker shades against the wrong base — ComparePlus's "blank"
+			// marker in particular.
+			return isAppDarkMode() ? 0x001E1E1E : 0x00FFFFFF;
 
 		case NPPM_GETEDITORDEFAULTFOREGROUNDCOLOR:
-			return 0x00000000;
+			return isAppDarkMode() ? 0x00D4D4D4 : 0x00000000;
 
 		case NPPM_ISDARKMODEENABLED:
-			// Until we wire up real dark-mode detection, report light mode.
-			// ComparePlus picks its color palette based on this.
-			return FALSE;
+			// ComparePlus picks its color palette based on this; on TRUE
+			// it switches to Settings.useDarkColors() so diff backgrounds
+			// stay legible against a dark editor background.
+			return isAppDarkMode() ? TRUE : FALSE;
 
 		case NPPM_ALLOCATEMARKER:
 		{

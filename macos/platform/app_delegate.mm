@@ -626,6 +626,11 @@ static void setDockIconFromLogo()
 			ScintillaBridge_sendMessage(ctx().scintillaView, SCI_COLOURISE, 0, -1);
 		if (ctx().isSplit && ctx().scintillaView2)
 			ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_COLOURISE, 0, -1);
+
+		SCNotification darkNotif{};
+		darkNotif.nmhdr.hwndFrom = ctx().mainHwnd;
+		darkNotif.nmhdr.code = NPPN_DARKMODECHANGED;
+		pluginManager().notify(&darkNotif);
 	});
 }
 
