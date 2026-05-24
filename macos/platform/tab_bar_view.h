@@ -32,6 +32,8 @@
 - (NSString*)titleForTabAtIndex:(NSInteger)index;
 - (void)setModified:(BOOL)modified forTabAtIndex:(NSInteger)index;
 - (BOOL)isModifiedAtIndex:(NSInteger)index;
+- (void)setFollowed:(BOOL)followed forTabAtIndex:(NSInteger)index;
+- (BOOL)isFollowedAtIndex:(NSInteger)index;
 
 // Reorder (moves tab internally without notifying delegate)
 - (void)moveTabFrom:(NSInteger)fromIndex to:(NSInteger)toIndex;

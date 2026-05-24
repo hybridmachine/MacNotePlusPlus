@@ -134,6 +134,20 @@ bool SettingsManager::load()
 		settings.functionListHeightRatio = ratio;
 	}
 
+	// Follow mode
+	if ([json[@"followColorNew"] isKindOfClass:[NSNumber class]])
+		settings.followColorNew = [json[@"followColorNew"] unsignedIntValue];
+	if ([json[@"followColorMedium"] isKindOfClass:[NSNumber class]])
+		settings.followColorMedium = [json[@"followColorMedium"] unsignedIntValue];
+	if ([json[@"followColorOld"] isKindOfClass:[NSNumber class]])
+		settings.followColorOld = [json[@"followColorOld"] unsignedIntValue];
+	if ([json[@"followThresholdNewSec"] isKindOfClass:[NSNumber class]])
+		settings.followThresholdNewSec = [json[@"followThresholdNewSec"] intValue];
+	if ([json[@"followThresholdMediumSec"] isKindOfClass:[NSNumber class]])
+		settings.followThresholdMediumSec = [json[@"followThresholdMediumSec"] intValue];
+	if ([json[@"followThresholdOldSec"] isKindOfClass:[NSNumber class]])
+		settings.followThresholdOldSec = [json[@"followThresholdOldSec"] intValue];
+
 	// Recent files
 	settings.recentFiles.clear();
 	NSArray* recent = json[@"recentFiles"];
@@ -211,6 +225,12 @@ bool SettingsManager::save()
 		@"fileBrowserRootPath": stringFromFileSystemPath(settings.fileBrowserRootPath) ?: @"",
 		@"rightPanelWidth": @(settings.rightPanelWidth),
 		@"functionListHeightRatio": @(settings.functionListHeightRatio),
+		@"followColorNew":          @(settings.followColorNew),
+		@"followColorMedium":       @(settings.followColorMedium),
+		@"followColorOld":          @(settings.followColorOld),
+		@"followThresholdNewSec":   @(settings.followThresholdNewSec),
+		@"followThresholdMediumSec":@(settings.followThresholdMediumSec),
+		@"followThresholdOldSec":   @(settings.followThresholdOldSec),
 		@"recentFiles":  recentArr
 	};
 

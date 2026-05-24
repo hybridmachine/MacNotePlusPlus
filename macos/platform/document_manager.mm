@@ -21,6 +21,7 @@
 #include "handle_registry.h"
 #include "tab_bar_view.h"
 #include "win32_tab_control_impl.h"
+#include "follow_mode.h"
 
 static uint64_t sNextFunctionListDocumentId = 1;
 static uint64_t sNextBufferId = 1;
@@ -83,6 +84,7 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 
 	auto& doc = docs[tabIndex];
 	ctx().suppressSavePointNotifications = true;
+	ctx().suppressFollowTracking = true;
 	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
 	ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)doc.content.c_str());
 	if (!doc.modified)
@@ -94,6 +96,7 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 	// For modified documents, this makes Scintilla think it's clean when it isn't.
 	// Mark the save point as invalid so SCN_SAVEPOINTREACHED won't clear modified.
 	doc.savePointValid = !doc.modified;
+	ctx().suppressFollowTracking = false;
 	ctx().suppressSavePointNotifications = false;
 
 	for (int bkLine : doc.bookmarkedLines)
@@ -151,6 +154,8 @@ void switchToTabInView(int viewIndex, int tabIndex)
 	NSString* title = WideToNSString(doc.title.c_str());
 	[ctx().mainWindow setTitle:[NSString stringWithFormat:@"PaperWasp — %@", title]];
 	updateWindowDocumentEdited();
+
+	refreshFollowUIForViewActiveTab(viewIndex);
 
 	// Notify plugins that a buffer was activated
 	{
@@ -245,6 +250,10 @@ void closeTabFromView(int viewIndex, int tabIndex)
 	if (tabIndex < 0 || tabIndex >= static_cast<int>(docs.size()))
 		return;
 	if (!sci) return;
+
+	// Tear down follow-mode plumbing before the buffer disappears.
+	if (docs[tabIndex].followMode)
+		stopFollowForBufferAtIndex(viewIndex, tabIndex);
 
 	const uint64_t closingBufferId = docs[tabIndex].bufferId;
 

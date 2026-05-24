@@ -19,6 +19,7 @@
 #include "status_bar.h"
 #include "file_path_ops.h"
 #include "tab_context_menu.h"
+#include "follow_mode.h"
 #include "incremental_search.h"
 #include "find_in_files.h"
 #include "brace_match.h"
@@ -671,6 +672,20 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				if (hMenu)
 					CheckMenuItem(hMenu, IDM_VIEW_FILESWITCHER,
 					              MF_BYCOMMAND | (ctx().fileSwitcherEnabled ? MF_CHECKED : MF_UNCHECKED));
+				return 0;
+			}
+			case IDM_VIEW_FOLLOW:
+			{
+				toggleFollowModeForActiveTab(ctx().activeView);
+				HMENU hMenu = GetMenu(hWnd);
+				if (hMenu)
+				{
+					int tab = (ctx().activeView == 0) ? ctx().activeTab : ctx().activeTab2;
+					auto& docs = (ctx().activeView == 0) ? ctx().documents : ctx().documents2;
+					bool on = (tab >= 0 && tab < (int)docs.size() && docs[tab].followMode);
+					CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
+					              MF_BYCOMMAND | (on ? MF_CHECKED : MF_UNCHECKED));
+				}
 				return 0;
 			}
 			case IDM_FILE_OPENFOLDER:
