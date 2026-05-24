@@ -19,6 +19,7 @@
 #include "status_bar.h"
 #include "file_path_ops.h"
 #include "tab_context_menu.h"
+#include "follow_mode.h"
 #include "incremental_search.h"
 #include "find_in_files.h"
 #include "brace_match.h"
@@ -52,6 +53,23 @@ void updateSynchronizeScrollingMenu(HWND hWnd)
 	{
 		CheckMenuItem(hMenu, IDM_VIEW_SYNCHRONIZE_SCROLLING,
 		              MF_BYCOMMAND | (ctx().syncScrolling ? MF_CHECKED : MF_UNCHECKED));
+	}
+}
+
+bool activeDocumentFollowMode()
+{
+	auto& docs = (ctx().activeView == 0) ? ctx().documents : ctx().documents2;
+	int tab = (ctx().activeView == 0) ? ctx().activeTab : ctx().activeTab2;
+	return tab >= 0 && tab < (int)docs.size() && docs[tab].followMode;
+}
+
+void updateFollowModeMenu(HWND hWnd)
+{
+	HMENU hMenu = GetMenu(hWnd);
+	if (hMenu)
+	{
+		CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
+		              MF_BYCOMMAND | (activeDocumentFollowMode() ? MF_CHECKED : MF_UNCHECKED));
 	}
 }
 
@@ -673,6 +691,12 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					              MF_BYCOMMAND | (ctx().fileSwitcherEnabled ? MF_CHECKED : MF_UNCHECKED));
 				return 0;
 			}
+			case IDM_VIEW_FOLLOW:
+			{
+				toggleFollowModeForActiveTab(ctx().activeView);
+				updateFollowModeMenu(hWnd);
+				return 0;
+			}
 			case IDM_FILE_OPENFOLDER:
 			{
 				openFolderWithDialog();
@@ -845,6 +869,8 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					              MF_BYCOMMAND | (ctx().syncScrolling && ctx().isSplit ? MF_CHECKED : MF_UNCHECKED));
 					CheckMenuItem(hMenu, IDM_VIEW_CHANGE_HISTORY,
 					              MF_BYCOMMAND | (ctx().showChangeHistory ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem(hMenu, IDM_VIEW_FOLLOW,
+					              MF_BYCOMMAND | (activeDocumentFollowMode() ? MF_CHECKED : MF_UNCHECKED));
 				}
 			}
 			updateFilePathMenuState();

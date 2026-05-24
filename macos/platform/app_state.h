@@ -61,6 +61,14 @@ struct AppContext
 	bool autoCloseBrackets = true;
 	bool showChangeHistory = true;
 
+	// Follow mode colors and time thresholds (mirror of AppSettings)
+	uint32_t followColorNew = 0xFF00C800;
+	uint32_t followColorMedium = 0xFFE0A040;
+	uint32_t followColorOld = 0xFF202020;
+	int followThresholdNewSec = 5;
+	int followThresholdMediumSec = 60;
+	int followThresholdOldSec = 300;
+
 	// Split view state
 	void* scintillaView2 = nullptr;
 	HWND scintillaSecondHwnd = nullptr;
@@ -119,6 +127,12 @@ struct AppContext
 
 	// Notification suppression (prevents false dirty indicators during tab switches)
 	bool suppressSavePointNotifications = false;
+
+	// Suppresses follow-mode line-age tracking during programmatic buffer
+	// restores (tab switch reloads the buffer, but we want existing ages kept).
+	// Distinct from suppressSavePointNotifications because the tail-follow
+	// append path also sets that flag to avoid marking the buffer dirty.
+	bool suppressFollowTracking = false;
 
 	// Auto-close internal edit guard (prevents recursive handling on programmatic edits)
 	bool autoCloseInternalEdit = false;

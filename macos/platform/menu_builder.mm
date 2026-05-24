@@ -148,6 +148,8 @@ HMENU buildMenuBar()
 	AppendMenuW(hViewMenu, MF_STRING | (ctx().fileSwitcherEnabled ? MF_CHECKED : MF_UNCHECKED),
 	            IDM_VIEW_FILESWITCHER, L"File &Switcher\tCtrl+Shift+O");
 	AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+	AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_FOLLOW, L"Follow File &Changes\tCtrl+Alt+F");
+	AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
 	AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_ZOOMIN, L"Zoom &In\tCtrl+=");
 	AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_ZOOMOUT, L"Zoom &Out\tCtrl+-");
 	AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_ZOOMRESTORE, L"&Reset Zoom\tCtrl+0");

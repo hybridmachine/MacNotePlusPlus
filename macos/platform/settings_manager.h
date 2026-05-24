@@ -48,6 +48,15 @@ struct AppSettings
 
 	// Recent files
 	std::vector<std::string> recentFiles;
+
+	// Follow Mode: 0xAARRGGBB colors and seconds thresholds for the age heatmap.
+	// Defaults: green / amber / black; 5s / 60s / 300s.
+	uint32_t followColorNew = 0xFF00C800;
+	uint32_t followColorMedium = 0xFFE0A040;
+	uint32_t followColorOld = 0xFF202020;
+	int followThresholdNewSec = 5;
+	int followThresholdMediumSec = 60;
+	int followThresholdOldSec = 300;
 };
 
 class SettingsManager

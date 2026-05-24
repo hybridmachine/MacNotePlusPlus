@@ -10,6 +10,7 @@
 @interface NppTabItem : NSObject
 @property (nonatomic, copy) NSString* title;
 @property (nonatomic, assign) BOOL modified;
+@property (nonatomic, assign) BOOL followed;
 @end
 
 @implementation NppTabItem
@@ -108,6 +109,7 @@ static const CGFloat kScrollWheelMultiplier = 3.0;
 	NppTabItem* item = [[NppTabItem alloc] init];
 	item.title = title ?: @"";
 	item.modified = NO;
+	item.followed = NO;
 
 	if (index < 0 || index > static_cast<NSInteger>(_tabs.count))
 		index = static_cast<NSInteger>(_tabs.count);
@@ -238,6 +240,21 @@ static const CGFloat kScrollWheelMultiplier = 3.0;
 	if (index < 0 || index >= static_cast<NSInteger>(_tabs.count))
 		return NO;
 	return _tabs[static_cast<NSUInteger>(index)].modified;
+}
+
+- (void)setFollowed:(BOOL)followed forTabAtIndex:(NSInteger)index
+{
+	if (index < 0 || index >= static_cast<NSInteger>(_tabs.count))
+		return;
+	_tabs[static_cast<NSUInteger>(index)].followed = followed;
+	[self setNeedsDisplay:YES];
+}
+
+- (BOOL)isFollowedAtIndex:(NSInteger)index
+{
+	if (index < 0 || index >= static_cast<NSInteger>(_tabs.count))
+		return NO;
+	return _tabs[static_cast<NSUInteger>(index)].followed;
 }
 
 // ============================================================
@@ -584,6 +601,34 @@ static const CGFloat kScrollWheelMultiplier = 3.0;
 	// Calculate text area (leave room for close button on right, modified dot on left)
 	CGFloat textX = tabRect.origin.x + kTabPaddingH;
 	CGFloat textMaxWidth = tabRect.size.width - kTabPaddingH * 2 - kCloseButtonSize - kCloseButtonPadding;
+
+	// Follow Mode eye icon — leftmost glyph so it stays visible even when truncation kicks in.
+	if (item.followed)
+	{
+		static const CGFloat kEyeSize = 13.0;
+		NSImage* eye = nil;
+		if (@available(macOS 11.0, *))
+			eye = [NSImage imageWithSystemSymbolName:@"eye" accessibilityDescription:@"Following file"];
+		if (eye)
+		{
+			NSColor* eyeColor = isDark
+				? [NSColor colorWithCalibratedWhite:0.85 alpha:alpha]
+				: [NSColor colorWithCalibratedWhite:0.2 alpha:alpha];
+			NSImage* tinted = [eye copy];
+			[tinted lockFocus];
+			[eyeColor set];
+			NSRect r = NSMakeRect(0, 0, tinted.size.width, tinted.size.height);
+			NSRectFillUsingOperation(r, NSCompositingOperationSourceAtop);
+			[tinted unlockFocus];
+			[tinted setTemplate:NO];
+
+			CGFloat eyeY = NSMidY(tabRect) - kEyeSize / 2.0;
+			NSRect eyeRect = NSMakeRect(textX, eyeY, kEyeSize, kEyeSize);
+			[tinted drawInRect:eyeRect fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:alpha];
+		}
+		textX += kEyeSize + 3.0;
+		textMaxWidth -= kEyeSize + 3.0;
+	}
 
 	if (item.modified)
 	{

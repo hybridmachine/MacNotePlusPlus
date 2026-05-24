@@ -10,6 +10,7 @@
 #include "save_prompt.h"
 #include "file_path_ops.h"
 #include "handle_registry.h"
+#include "follow_mode.h"
 
 // Action context stored per menu invocation
 struct TabActionContext
@@ -128,6 +129,11 @@ static TabActionContext s_tabActionCtx;
 			}
 			break;
 		}
+		case IDM_TAB_FOLLOW:
+		{
+			toggleFollowMode(viewIndex, tabIndex);
+			break;
+		}
 	}
 }
 
@@ -213,6 +219,17 @@ void showTabContextMenu(int viewIndex, int tabIndex, NSPoint screenPoint)
 	revealItem.tag = IDM_TAB_REVEAL_FINDER;
 	if (!hasPath) revealItem.enabled = NO;
 	[menu addItem:revealItem];
+
+	[menu addItem:[NSMenuItem separatorItem]];
+
+	NSString* followLabel = docs[tabIndex].followMode ? @"Stop Following Changes" : @"Follow Changes";
+	NSMenuItem* followItem = [[NSMenuItem alloc] initWithTitle:followLabel
+	                                                    action:@selector(menuAction:) keyEquivalent:@""];
+	followItem.target = s_tabContextTarget;
+	followItem.tag = IDM_TAB_FOLLOW;
+	if (docs[tabIndex].followMode)
+		followItem.state = NSControlStateValueOn;
+	[menu addItem:followItem];
 
 	// Pop up at the screen point using the tab bar's HWND native view
 	HWND tabHwnd = (viewIndex == 0) ? ctx().tabHwnd : ctx().tabHwnd2;

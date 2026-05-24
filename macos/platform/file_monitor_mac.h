@@ -31,6 +31,14 @@ public:
 	// Stop watching a directory.
 	void removeDirectory(const std::wstring& path);
 
+	// Start watching a specific file path for changes. The per-file callback fires on
+	// modify/remove/rename in addition to (not in place of) the global setCallback hook.
+	// Multiple files can be watched independently.
+	bool addFilePath(const std::wstring& path, FileMonitorCallback callback);
+
+	// Stop watching a specific file path.
+	void removeFilePath(const std::wstring& path);
+
 	// Set callback for immediate notification (called on the main thread).
 	void setCallback(FileMonitorCallback callback);
 

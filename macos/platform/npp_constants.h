@@ -121,6 +121,7 @@ constexpr double NPP_STATUS_BAR_HEIGHT = 22.0;
 #define IDM_VIEW_FILEBROWSER         42088
 #define IDM_VIEW_FILESWITCHER        42089
 #define IDM_FILE_OPENFOLDER          42094
+#define IDM_VIEW_FOLLOW              42095
 
 // Upstream Notepad++ view command IDs sent by plugins through NPPM_MENUCOMMAND.
 #define IDM_VIEW_GOTO_ANOTHER_VIEW     10001
@@ -141,6 +142,7 @@ constexpr double NPP_STATUS_BAR_HEIGHT = 22.0;
 #define IDM_TAB_COPY_FILENAME    42211
 #define IDM_TAB_COPY_DIR_PATH    42212
 #define IDM_TAB_REVEAL_FINDER    42213
+#define IDM_TAB_FOLLOW           42214
 
 // Help menu commands
 #define IDM_HELP_ABOUT           46001
