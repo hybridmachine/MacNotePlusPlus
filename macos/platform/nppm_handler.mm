@@ -13,6 +13,7 @@
 #include "string_utils.h"
 #include "compare_plus_visibility.h"
 #include "appearance.h"
+#include "plugin_docking.h"
 #include "Notepad_plus_msgs.h"
 #include "Scintilla.h"
 
@@ -233,6 +234,26 @@ LRESULT handleNppmMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			switchToTabInView(viewIdx, tabIdx);
 			return TRUE;
 		}
+
+		case NPPM_DMMSHOW:
+			return showPluginDockingDialog(reinterpret_cast<HWND>(lParam)) ? TRUE : FALSE;
+
+		case NPPM_DMMHIDE:
+			return hidePluginDockingDialog(reinterpret_cast<HWND>(lParam)) ? TRUE : FALSE;
+
+		case NPPM_DMMUPDATEDISPINFO:
+			return updatePluginDockingDialog(reinterpret_cast<HWND>(lParam)) ? TRUE : FALSE;
+
+		case NPPM_DMMREGASDCKDLG:
+			return registerPluginDockingDialog(reinterpret_cast<const void*>(lParam)) ? TRUE : FALSE;
+
+		case NPPM_DMMVIEWOTHERTAB:
+			return showPluginDockingDialogByName(reinterpret_cast<const wchar_t*>(lParam)) ? TRUE : FALSE;
+
+		case NPPM_DMMGETPLUGINHWNDBYNAME:
+			return reinterpret_cast<LRESULT>(
+				findPluginDockingDialog(reinterpret_cast<const wchar_t*>(wParam),
+				                        reinterpret_cast<const wchar_t*>(lParam)));
 
 		case NPPM_GETEDITORDEFAULTBACKGROUNDCOLOR:
 			// Returned as 0x00BBGGRR (Win32 COLORREF). Must match the

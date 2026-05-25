@@ -19,6 +19,7 @@
 #include "file_switcher_panel.h"
 #include "function_list_panel.h"
 #include "npp_constants.h"
+#include "plugin_docking.h"
 #include "scintilla_bridge.h"
 #include "windows.h"
 #include "split_view.h"
@@ -190,7 +191,8 @@ void relayoutPanels()
 	// -- Calculate zone widths ------------------------------------------------
 
 	bool leftZoneVisible = ctx().fileBrowserEnabled || ctx().fileSwitcherEnabled;
-	bool rightZoneVisible = ctx().functionListEnabled || ctx().clipboardHistoryEnabled;
+	bool pluginDockingVisible = isPluginDockingVisible();
+	bool rightZoneVisible = ctx().functionListEnabled || ctx().clipboardHistoryEnabled || pluginDockingVisible;
 
 	CGFloat leftWidth = leftZoneVisible ? static_cast<CGFloat>(ctx().leftPanelWidth) : 0.0;
 	CGFloat mapWidth = ctx().documentMapEnabled ? static_cast<CGFloat>(ctx().documentMapWidth) : 0.0;
@@ -358,8 +360,11 @@ void relayoutPanels()
 
 		NSView* flContainer = (__bridge NSView*)functionListContainerView();
 		NSView* chContainer = (__bridge NSView*)clipboardHistoryContainerView();
-		bool hasBoth = (flContainer != nil) && (chContainer != nil) &&
-		               ctx().functionListEnabled && ctx().clipboardHistoryEnabled;
+		NSView* pluginContainer = (__bridge NSView*)pluginDockingContainerView();
+		bool showFunctionList = (flContainer != nil) && ctx().functionListEnabled && !pluginDockingVisible;
+		bool showClipboardHistory = (chContainer != nil) && ctx().clipboardHistoryEnabled && !pluginDockingVisible;
+		bool showPluginDocking = (pluginContainer != nil) && pluginDockingVisible;
+		bool hasBoth = showFunctionList && showClipboardHistory;
 
 		if (hasBoth)
 		{
@@ -406,14 +411,26 @@ void relayoutPanels()
 			if (sRightHorizontalDivider)
 				sRightHorizontalDivider.hidden = YES;
 		}
+
+		if (showPluginDocking)
+		{
+			pluginContainer.frame = NSMakeRect(curX, zoneY, rightWidth, zoneH);
+			pluginContainer.hidden = NO;
+			if (flContainer) flContainer.hidden = YES;
+			if (chContainer) chContainer.hidden = YES;
+			if (sRightHorizontalDivider) sRightHorizontalDivider.hidden = YES;
+			layoutPluginDockingViews();
+		}
 	}
 	else
 	{
 		// Hide right-zone elements
 		NSView* flContainer = (__bridge NSView*)functionListContainerView();
 		NSView* chContainer = (__bridge NSView*)clipboardHistoryContainerView();
+		NSView* pluginContainer = (__bridge NSView*)pluginDockingContainerView();
 		if (flContainer) flContainer.hidden = !ctx().functionListEnabled;
 		if (chContainer) chContainer.hidden = !ctx().clipboardHistoryEnabled;
+		if (pluginContainer) pluginContainer.hidden = YES;
 		if (sRightVerticalDivider) sRightVerticalDivider.hidden = YES;
 		if (sRightHorizontalDivider) sRightHorizontalDivider.hidden = YES;
 	}
