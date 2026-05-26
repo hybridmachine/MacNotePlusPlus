@@ -5,6 +5,16 @@
 #include <cwctype>
 #include <cstring>
 
+// All function declarations below use C linkage so shim .mm implementations
+// (where BOOL is inherited from ObjC as `bool`) and plugin .cpp callers
+// (where BOOL is `int`) resolve to the same unmangled symbol. Without this,
+// functions with BOOL parameters — MoveWindow, InvalidateRect,
+// EnumChildWindows, etc. — mangle differently on the two sides and the
+// plugin's call dispatches through a null pointer at runtime.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ============================================================
 // Window Messages
 // ============================================================
@@ -1929,3 +1939,62 @@ inline BOOL EnumWindows(WNDENUMPROC lpEnumFunc, LPARAM lParam)
 	return TRUE;
 }
 BOOL EnumChildWindows(HWND hWndParent, WNDENUMPROC lpEnumFunc, LPARAM lParam);
+
+// ============================================================
+// SendInput (stub for macOS — used by ComparePlus for click simulation)
+// ============================================================
+#define INPUT_MOUSE    0
+#define INPUT_KEYBOARD 1
+#define INPUT_HARDWARE 2
+
+#define MOUSEEVENTF_LEFTDOWN   0x0002
+#define MOUSEEVENTF_LEFTUP     0x0004
+
+struct MOUSEINPUT
+{
+	LONG dx;
+	LONG dy;
+	DWORD mouseData;
+	DWORD dwFlags;
+	DWORD time;
+	ULONG_PTR dwExtraInfo;
+};
+
+struct KEYBDINPUT
+{
+	WORD wVk;
+	WORD wScan;
+	DWORD dwFlags;
+	DWORD time;
+	ULONG_PTR dwExtraInfo;
+};
+
+struct HARDWAREINPUT
+{
+	DWORD uMsg;
+	WORD wParamL;
+	WORD wParamH;
+};
+
+struct INPUT
+{
+	DWORD type;
+	union
+	{
+		MOUSEINPUT mi;
+		KEYBDINPUT ki;
+		HARDWAREINPUT hi;
+	};
+};
+
+inline UINT SendInput(UINT nInputs, INPUT* pInputs, int cbSize)
+{
+	(void)pInputs; (void)cbSize;
+	// No-op on macOS — return nInputs to indicate "success" so callers
+	// don't treat it as failure and disable features.
+	return nInputs;
+}
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

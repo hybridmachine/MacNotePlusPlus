@@ -1,0 +1,17 @@
+// app_delegate.h — Application delegate and lifecycle
+// Part of the PaperWasp macOS app.
+
+#pragma once
+
+#import <Cocoa/Cocoa.h>
+
+@interface NppDropTargetView : NSView
+@end
+
+@interface NppAppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, NSSplitViewDelegate>
+{
+	BOOL _finishedLaunching;
+	NSMutableArray<NSString*>* _pendingFiles;
+}
+- (void)performContextAction:(NSMenuItem*)sender;
+@end

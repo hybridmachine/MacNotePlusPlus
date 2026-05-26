@@ -1,0 +1,7 @@
+Upstream: https://github.com/nea/MarkdownViewerPlusPlus
+Imported commit: 1a3dddc525913995bd65b6c7d6a6c11a1c2ca7f3
+
+PaperWasp's macOS port keeps the upstream C#/.NET Framework WinForms plugin
+source as a behavioral and licensing reference. The loadable macOS plugin lives
+under src/macOS and is implemented as a native Mach-O dylib because PaperWasp's
+plugin manager loads native modules, not Windows .NET plugin DLLs.

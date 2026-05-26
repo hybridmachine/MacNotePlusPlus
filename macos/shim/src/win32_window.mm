@@ -334,8 +334,41 @@ BOOL UpdateWindow(HWND hWnd)
 	return TRUE;
 }
 
-BOOL EnableWindow(HWND hWnd, BOOL bEnable) { return TRUE; }
-BOOL IsWindowEnabled(HWND hWnd) { return TRUE; }
+BOOL EnableWindow(HWND hWnd, BOOL bEnable)
+{
+	auto* info = HandleRegistry::getWindowInfo(hWnd);
+	if (!info)
+		return FALSE;
+
+	BOOL wasDisabled = info->enabled ? FALSE : TRUE;
+	bool newEnabled = (bEnable != FALSE);
+	info->enabled = newEnabled;
+
+	if (info->nativeView)
+	{
+		NSView* view = (__bridge NSView*)info->nativeView;
+		if ([view isKindOfClass:[NSControl class]])
+			((NSControl*)view).enabled = newEnabled;
+	}
+	if (info->nativeWindow)
+	{
+		// Top-level windows have no native "enabled" state; the closest
+		// Cocoa analogue is blocking input. ComparePlus disables the main
+		// Notepad++ window while its progress dialog runs, expecting the
+		// user to be locked out. ignoresMouseEvents handles that path.
+		NSWindow* window = (__bridge NSWindow*)info->nativeWindow;
+		window.ignoresMouseEvents = !newEnabled;
+	}
+	return wasDisabled;
+}
+
+BOOL IsWindowEnabled(HWND hWnd)
+{
+	auto* info = HandleRegistry::getWindowInfo(hWnd);
+	if (!info)
+		return FALSE;
+	return info->enabled ? TRUE : FALSE;
+}
 
 BOOL IsWindowVisible(HWND hWnd)
 {
@@ -633,7 +666,53 @@ BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy,
 
 	if (!(uFlags & SWP_NOSIZE) || !(uFlags & SWP_NOMOVE))
 	{
-		if (info->nativeView)
+		// Top-level windows (NSWindow-backed): move/resize the window itself
+		// in screen coordinates. Win32 passes screen coords for X/Y on
+		// top-level windows, so convert top-left-origin → bottom-left-origin.
+		if (info->nativeWindow)
+		{
+			NSWindow* window = (__bridge NSWindow*)info->nativeWindow;
+			NSRect currentFrame = [window frame];
+
+			CGFloat newW = (uFlags & SWP_NOSIZE) ? currentFrame.size.width  : cx;
+			CGFloat newH = (uFlags & SWP_NOSIZE) ? currentFrame.size.height : cy;
+			CGFloat newX, newY;
+			if (uFlags & SWP_NOMOVE)
+			{
+				newX = currentFrame.origin.x;
+				newY = currentFrame.origin.y;
+			}
+			else
+			{
+				// Win32 passes screen coords with top-left origin. Cocoa
+				// screen coords use bottom-left. Pick the screen we're
+				// actually positioning against: prefer the one containing
+				// the target point, fall back to the window's current
+				// screen, then the primary. Using [NSScreen mainScreen]
+				// unconditionally breaks multi-monitor layouts because
+				// mainScreen is the key-window screen, not necessarily the
+				// one we're moving to.
+				NSPoint targetPt = NSMakePoint(X, Y);
+				NSScreen* targetScreen = nil;
+				for (NSScreen* s in [NSScreen screens])
+				{
+					if (NSPointInRect(targetPt, [s frame]))
+					{
+						targetScreen = s;
+						break;
+					}
+				}
+				if (!targetScreen) targetScreen = [window screen];
+				if (!targetScreen) targetScreen = [NSScreen mainScreen];
+
+				NSRect screenFrame = [targetScreen frame];
+				newX = X;
+				newY = NSMaxY(screenFrame) - Y - newH;
+			}
+
+			[window setFrame:NSMakeRect(newX, newY, newW, newH) display:YES];
+		}
+		else if (info->nativeView)
 		{
 			NSView* view = (__bridge NSView*)info->nativeView;
 			NSRect currentFrame = [view frame];

@@ -198,6 +198,7 @@ LanguageNameInfo ScintillaEditView::_langNameInfoArray[L_EXTERNAL + 1] = {
 	{L"toml",             L"TOML",                   L"Tom's Obvious Minimal Language file",               L_TOML,            "toml"},
 	{L"sas",              L"SAS",                    L"SAS file",                                          L_SAS,             "sas"},
 	{L"errorlist",        L"ErrorList",              L"ErrorList",                                         L_ERRORLIST,       "errorlist"},
+	{L"asm65c02",         L"Assembly (65C02)",       L"WDC 65C02 assembly source file",                    L_ASM_65C02,       "asm"},
 	{L"ext",              L"External",               L"External",                                          L_EXTERNAL,        "null"}
 };
 
@@ -1817,7 +1818,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 	{
 		if (getCurrentBuffer()->getUnicodeMode() == uni8Bit)
 		{
-			if (typeDoc == L_CSS || typeDoc == L_CAML || typeDoc == L_ASM || typeDoc == L_MATLAB)
+			if (typeDoc == L_CSS || typeDoc == L_CAML || typeDoc == L_ASM || typeDoc == L_ASM_65C02 || typeDoc == L_MATLAB)
 				execute(SCI_SETCODEPAGE, CP_ACP);
 			else
 				execute(SCI_SETCODEPAGE, _codepage);
@@ -1973,6 +1974,9 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 
 		case L_ASM :
 			setAsmLexer(); break;
+
+		case L_ASM_65C02 :
+			setAsm65C02Lexer(); break;
 
 		case L_DIFF :
 			setDiffLexer(); break;
@@ -2474,7 +2478,7 @@ void ScintillaEditView::bufferUpdated(Buffer * buffer, int mask)
 				if (isCJK())
 				{
 					LangType typeDoc = buffer->getLangType();
-					if (typeDoc == L_CSS || typeDoc == L_CAML || typeDoc == L_ASM || typeDoc == L_MATLAB)
+					if (typeDoc == L_CSS || typeDoc == L_CAML || typeDoc == L_ASM || typeDoc == L_ASM_65C02 || typeDoc == L_MATLAB)
 						enc = CP_ACP;	//you may also want to set charsets here, not yet implemented
 					else
 						enc = _codepage;

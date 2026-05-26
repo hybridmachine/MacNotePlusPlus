@@ -155,32 +155,9 @@ int GetDeviceCaps(HDC hdc, int index)
 	}
 }
 
-// ============================================================
-// ImageList (stubs)
-// ============================================================
-HIMAGELIST ImageList_Create(int cx, int cy, UINT flags, int cInitial, int cGrow) { return reinterpret_cast<HIMAGELIST>(1); }
-BOOL ImageList_Destroy(HIMAGELIST himl) { return TRUE; }
-int ImageList_Add(HIMAGELIST himl, HBITMAP hbmImage, HBITMAP hbmMask) { return 0; }
-int ImageList_AddMasked(HIMAGELIST himl, HBITMAP hbmImage, COLORREF crMask) { return 0; }
-int ImageList_ReplaceIcon(HIMAGELIST himl, int i, HICON hicon) { return 0; }
-BOOL ImageList_Remove(HIMAGELIST himl, int i) { return TRUE; }
-int ImageList_GetImageCount(HIMAGELIST himl) { return 0; }
-BOOL ImageList_SetImageCount(HIMAGELIST himl, UINT uNewCount) { return TRUE; }
-BOOL ImageList_Draw(HIMAGELIST himl, int i, HDC hdcDst, int x, int y, UINT fStyle) { return TRUE; }
-BOOL ImageList_SetIconSize(HIMAGELIST himl, int cx, int cy) { (void)himl; (void)cx; (void)cy; return TRUE; }
-HICON ImageList_GetIcon(HIMAGELIST himl, int i, UINT flags) { (void)himl; (void)i; (void)flags; return nullptr; }
-BOOL ImageList_GetIconSize(HIMAGELIST himl, int* cx, int* cy) { if (cx) *cx = 16; if (cy) *cy = 16; return TRUE; }
-BOOL ImageList_GetImageInfo(HIMAGELIST himl, int i, IMAGEINFO* pImageInfo) { if (pImageInfo) memset(pImageInfo, 0, sizeof(IMAGEINFO)); return FALSE; }
-BOOL ImageList_DrawEx(HIMAGELIST himl, int i, HDC hdcDst, int x, int y, int dx, int dy, COLORREF rgbBk, COLORREF rgbFg, UINT fStyle) { return TRUE; }
-
-// ImageList drag stubs
-BOOL ImageList_BeginDrag(HIMAGELIST himlTrack, int iTrack, int dxHotspot, int dyHotspot) { return TRUE; }
-BOOL ImageList_DragEnter(HWND hwndLock, int x, int y) { return TRUE; }
-BOOL ImageList_DragMove(int x, int y) { return TRUE; }
-BOOL ImageList_DragShowNolock(BOOL fShow) { return TRUE; }
-BOOL ImageList_DragLeave(HWND hwndLock) { return TRUE; }
-void ImageList_EndDrag() {}
-HIMAGELIST ImageList_Merge(HIMAGELIST himl1, int i1, HIMAGELIST himl2, int i2, int dx, int dy) { return nullptr; }
+// ImageList_* functions live in win32_toolbar_rebar.mm (real image-list
+// tracking). Previously duplicated here as stubs; duplicates were hidden
+// until -force_load pulled in both .o files, at which point ld errored.
 
 // ============================================================
 // Icon management (stubs)

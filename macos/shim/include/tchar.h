@@ -167,6 +167,9 @@ inline int swprintf_s(wchar_t* buf, size_t count, const wchar_t* fmt, ...) {
 #define _vsnwprintf vswprintf
 #define sscanf_s sscanf
 
+// _snwprintf_s, _itow_s, _wfopen_s are defined in winbase.h (included via windows.h).
+// Guarded by SHIM_HAS_SAFE_CRT to prevent duplicate definitions.
+
 // memcpy_s / memmove_s
 #include <cstring>
 #include <cerrno>

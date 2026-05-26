@@ -1,4 +1,8 @@
 #-------------------------------------------------------------------------------
+# Git worktrees
+.worktrees/
+
+#-------------------------------------------------------------------------------
 # VisualStudio
 
 #-- User-specific files
@@ -157,6 +161,9 @@ PowerEditor/bin/SourceCodePro-Regular.ttf
 #-------------------------------------------------------------------------------
 # macOS port
 macos/build/
+macos/dist/
+*.p12
+*.keychain-db
 
 #-------------------------------------------------------------------------------
 # MinGW-w64 GCC
@@ -169,3 +176,10 @@ PowerEditor/src/MISC/md5/RCa06792
 *.db
 *.sln
 *.opendb
+.superpowers/
+.env
+.agents
+.claude
+.copilot
+.github
+.worktrees

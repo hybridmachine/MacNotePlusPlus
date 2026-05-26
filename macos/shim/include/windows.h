@@ -102,6 +102,18 @@ inline HRESULT CoCreateInstance(REFCLSID rclsid, IUnknown* pUnkOuter, DWORD dwCl
 // (Implementations in macos/shim/src/*.mm)
 // ============================================================
 
+// Functions with BOOL parameters need C linkage so shim .mm implementations
+// (where BOOL is inherited from ObjC as `bool`) and plugin .cpp callers
+// (where BOOL is `int`) resolve to the same unmangled symbol. Everything
+// else can stay with C++ linkage. Applied per-declaration below via
+// `extern "C"` rather than a block wrap to avoid clashing with
+// Carbon/Foundation symbols like LoadResource / TrackPopupMenuEx.
+#ifdef __cplusplus
+#define SHIM_BOOL_API extern "C"
+#else
+#define SHIM_BOOL_API
+#endif
+
 // Window management
 ATOM RegisterClassExW(const WNDCLASSEXW* lpWndClass);
 #define RegisterClassEx RegisterClassExW
@@ -123,7 +135,7 @@ HWND CreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName,
 BOOL DestroyWindow(HWND hWnd);
 BOOL ShowWindow(HWND hWnd, int nCmdShow);
 BOOL UpdateWindow(HWND hWnd);
-BOOL EnableWindow(HWND hWnd, BOOL bEnable);
+SHIM_BOOL_API BOOL EnableWindow(HWND hWnd, BOOL bEnable);
 BOOL IsWindowEnabled(HWND hWnd);
 BOOL IsWindowVisible(HWND hWnd);
 BOOL IsWindow(HWND hWnd);
@@ -160,7 +172,7 @@ LONG_PTR SetClassLongPtrW(HWND hWnd, int nIndex, LONG_PTR dwNewLong);
 
 BOOL GetWindowRect(HWND hWnd, LPRECT lpRect);
 BOOL GetClientRect(HWND hWnd, LPRECT lpRect);
-BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint);
+SHIM_BOOL_API BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint);
 BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
 
 int GetWindowTextW(HWND hWnd, LPWSTR lpString, int nMaxCount);
@@ -177,7 +189,7 @@ BOOL LockWindowUpdate(HWND hWndLock);
 LONG GetWindowLongW_impl(HWND hWnd, int nIndex);
 LONG SetWindowLongW_impl(HWND hWnd, int nIndex, LONG dwNewLong);
 
-BOOL InvalidateRect(HWND hWnd, const RECT* lpRect, BOOL bErase);
+SHIM_BOOL_API BOOL InvalidateRect(HWND hWnd, const RECT* lpRect, BOOL bErase);
 BOOL RedrawWindow(HWND hWnd, const RECT* lprcUpdate, HRGN hrgnUpdate, UINT flags);
 
 HDC BeginPaint(HWND hWnd, LPPAINTSTRUCT lpPaint);
@@ -283,8 +295,8 @@ BOOL SetDlgItemTextW(HWND hDlg, int nIDDlgItem, LPCWSTR lpString);
 BOOL SetDlgItemTextA(HWND hDlg, int nIDDlgItem, LPCSTR lpString);
 UINT GetDlgItemTextW(HWND hDlg, int nIDDlgItem, LPWSTR lpString, int cchMax);
 UINT GetDlgItemTextA(HWND hDlg, int nIDDlgItem, LPSTR lpString, int cchMax);
-BOOL SetDlgItemInt(HWND hDlg, int nIDDlgItem, UINT uValue, BOOL bSigned);
-UINT GetDlgItemInt(HWND hDlg, int nIDDlgItem, BOOL* lpTranslated, BOOL bSigned);
+SHIM_BOOL_API BOOL SetDlgItemInt(HWND hDlg, int nIDDlgItem, UINT uValue, BOOL bSigned);
+SHIM_BOOL_API UINT GetDlgItemInt(HWND hDlg, int nIDDlgItem, BOOL* lpTranslated, BOOL bSigned);
 LRESULT SendDlgItemMessageW(HWND hDlg, int nIDDlgItem, UINT Msg, WPARAM wParam, LPARAM lParam);
 BOOL CheckDlgButton(HWND hDlg, int nIDButton, UINT uCheck);
 UINT IsDlgButtonChecked(HWND hDlg, int nIDButton);
@@ -310,8 +322,8 @@ HMENU GetSystemMenu(HWND hWnd, BOOL bRevert);
 BOOL AppendMenuW(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, LPCWSTR lpNewItem);
 BOOL InsertMenuW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, LPCWSTR lpNewItem);
 BOOL InsertMenuItemW(HMENU hMenu, UINT item, BOOL fByPosition, LPCMENUITEMINFOW lpmi);
-BOOL SetMenuItemInfoW(HMENU hMenu, UINT item, BOOL fByPosition, LPCMENUITEMINFOW lpmii);
-BOOL GetMenuItemInfoW(HMENU hMenu, UINT item, BOOL fByPosition, LPMENUITEMINFOW lpmii);
+SHIM_BOOL_API BOOL SetMenuItemInfoW(HMENU hMenu, UINT item, BOOL fByPosition, LPCMENUITEMINFOW lpmii);
+SHIM_BOOL_API BOOL GetMenuItemInfoW(HMENU hMenu, UINT item, BOOL fByPosition, LPMENUITEMINFOW lpmii);
 BOOL RemoveMenu(HMENU hMenu, UINT uPosition, UINT uFlags);
 BOOL DeleteMenu(HMENU hMenu, UINT uPosition, UINT uFlags);
 BOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable);
@@ -320,7 +332,7 @@ BOOL CheckMenuRadioItem(HMENU hMenu, UINT first, UINT last, UINT check, UINT fla
 int GetMenuItemCount(HMENU hMenu);
 UINT GetMenuItemID(HMENU hMenu, int nPos);
 BOOL TrackPopupMenu(HMENU hMenu, UINT uFlags, int x, int y, int nReserved, HWND hWnd, const RECT* prcRect);
-BOOL TrackPopupMenuEx(HMENU hMenu, UINT fuFlags, int x, int y, HWND hwnd, void* lptpm);
+// TrackPopupMenuEx declared in winuser.h with LPTPMPARAMS — keep only that decl.
 BOOL DrawMenuBar(HWND hWnd);
 int GetMenuStringW(HMENU hMenu, UINT uIDItem, LPWSTR lpString, int cchMax, UINT flags);
 UINT GetMenuState(HMENU hMenu, UINT uId, UINT uFlags);
@@ -457,6 +469,12 @@ int GetDeviceCaps(HDC hdc, int index);
 COLORREF GetSysColor(int nIndex);
 HBRUSH GetSysColorBrush(int nIndex);
 int GetSystemMetrics(int nIndex);
+
+#ifndef SM_CXMENUCHECK
+#define SM_CXMENUCHECK   71
+#define SM_CYMENUCHECK   72
+#endif
+
 BOOL SystemParametersInfoW(UINT uiAction, UINT uiParam, LPVOID pvParam, UINT fWinIni);
 #define SystemParametersInfo SystemParametersInfoW
 
@@ -511,7 +529,7 @@ HDWP BeginDeferWindowPos(int nNumWindows);
 HDWP DeferWindowPos(HDWP hWinPosInfo, HWND hWnd, HWND hWndInsertAfter, int x, int y, int cx, int cy, UINT uFlags);
 BOOL EndDeferWindowPos(HDWP hWinPosInfo);
 
-BOOL EnumChildWindows(HWND hWndParent, WNDENUMPROC lpEnumFunc, LPARAM lParam);
+SHIM_BOOL_API BOOL EnumChildWindows(HWND hWndParent, WNDENUMPROC lpEnumFunc, LPARAM lParam);
 HWND FindWindowExW(HWND hWndParent, HWND hWndChildAfter, LPCWSTR lpszClass, LPCWSTR lpszWindow);
 #define FindWindowEx FindWindowExW
 

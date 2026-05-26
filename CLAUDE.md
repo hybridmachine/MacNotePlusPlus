@@ -4,127 +4,97 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Notepad++ is a Windows-native source code editor written in C++20. It wraps the Scintilla editor component and Lexilla lexer library, adding tabbed editing, plugin support, docking panels, and extensive configuration. It is a Win32 application using the Windows API directly (no cross-platform framework).
+**PaperWasp 1.0** is an independent macOS port of the Notepad++ Win32 C++20 source code editor. It is **not a cross-platform rewrite** — instead it runs the original Win32 codebase against a header-only Win32-to-Cocoa shim, with a separate Objective-C++ platform layer providing the macOS-native UI shell. Not affiliated with or endorsed by the creators of Notepad++.
+
+Active development happens on the `macos-port` branch; PRs target `master`.
 
 ## Build Commands
 
-### MSBuild (primary, requires Visual Studio 2022 v143 toolset)
+### macOS port (CMake + Xcode generator)
 
-```
-msbuild PowerEditor\visual.net\notepadPlus.sln /p:Configuration=Debug /p:Platform=x64
-```
+```bash
+# First-time setup (or full clean rebuild)
+cd macos/build
+rm -rf *
+cmake -G Xcode ..
 
-Platforms: `x64`, `Win32`, `ARM64`. Configurations: `Debug`, `Release`. Building the solution automatically builds Scintilla and Lexilla as dependencies.
+# Dev binary at macos/build/{Debug,Release}/PaperWasp
+cmake --build . --config Debug --target PaperWasp
 
-### GCC / MinGW-w64 (via MSYS2)
+# .app bundle at macos/dist/PaperWasp.app (used for icon/Finder testing & release)
+cmake --build . --config Release --target PaperWasp_package
 
-```
-cd PowerEditor/gcc
-mingw32-make                    # Release build
-mingw32-make DEBUG=1            # Debug build
-mingw32-make CXX=clang++        # Use Clang
-mingw32-make VERBOSE=1          # Show commands
-```
-
-Output goes to `bin.x86_64/` or `bin.i686/` (with `-debug` suffix for debug builds).
-
-### CMake
-
-Requires pre-building Scintilla and Lexilla via nmake first:
-```
-cd scintilla\win32 && nmake -f scintilla.mak
-cd lexilla\src && nmake -f lexilla.mak
-cd PowerEditor\src && cmake . && cmake --build .
+# Unsigned DMG at macos/dist/PaperWasp-unsigned.dmg
+cmake --build . --target PaperWasp_dmg
 ```
 
-## Running Tests
+**Must use `-G Xcode`.** The default Makefiles generator fails on deeply nested object paths in this repo.
 
-Tests require Windows and a built `notepad++.exe` (Win32/Debug):
+### Signing, notarization, and releases
 
-```powershell
-# Function List parser tests
-.\PowerEditor\Test\FunctionList\unitTestLauncher.ps1
+Releases use the tag convention `paperwasp-vX.Y.Z` (older `v1.0.X` tags are pre-rename). Build the `.app` first, then run:
 
-# URL detection tests
-.\PowerEditor\Test\UrlDetection\verifyUrlDetection.ps1
-
-# XML validation (requires Python with lxml, rfc3987)
-python PowerEditor\Test\xmlValidator\validator_xml.py
+```bash
+export CODESIGN_IDENTITY="Developer ID Application: ..."
+export APPLE_ID=... APPLE_TEAM_ID=... APPLE_APP_PASSWORD=...
+macos/scripts/sign-and-notarize.sh    # signs .app inside-out, builds signed DMG, notarizes, staples both
 ```
 
-CI commit message flags: `[force all]`, `[force one]`, `[force xml]`, `[force none]` control which CI jobs run.
+Artifacts land in `macos/dist/PaperWasp.{app,dmg}`. The script is the canonical signing path — the `PaperWasp_sign` cmake target is a simpler subset and is not used for releases. Full release procedure is in the `macos-release` skill.
+
+### Windows builds (legacy upstream)
+
+The Windows build paths still exist but are not exercised on macOS. MSBuild solution at `PowerEditor/visual.net/notepadPlus.sln` (requires VS 2022 v143 toolset, builds Scintilla/Lexilla as dependencies). MinGW build at `PowerEditor/gcc/` via `mingw32-make`. See `AGENTS.md` or `.github/copilot-instructions.md` for full Windows command details.
+
+## Tests
+
+The repo's test suites (`PowerEditor/Test/FunctionList/`, `PowerEditor/Test/UrlDetection/`, `PowerEditor/Test/xmlValidator/`) are **Windows-only** and require a built `notepad++.exe`. There is no macOS test runner. When adding macOS-only features, verify by running the built `.app` manually.
+
+CI (`.github/workflows/CI_build.yml`) is Windows-only. Commit-title flags `[force all]`, `[force one]`, `[force xml]`, `[force none]` scope CI jobs.
 
 ## Architecture
 
-### Core Class Hierarchy
+### Two-layer split: shim + platform
 
 ```
-winmain.cpp (WinMain entry point)
-  └─ Notepad_plus_Window     (main window, message loop)
-       └─ Notepad_plus        (core logic, command dispatch)
-            ├─ ScintillaEditView ×2   (main + sub edit views, wraps Scintilla)
-            ├─ DocTabView ×2          (tab bars for each view)
-            ├─ FileManager            (singleton, manages all Buffer objects)
-            ├─ NppParameters          (singleton, all config/settings)
-            ├─ PluginsManager         (loads plugin DLLs)
-            ├─ DockingManager         (docking panel framework)
-            ├─ FindReplaceDlg         (find/replace)
-            └─ PreferenceDlg          (settings UI)
+Notepad++ Win32 C++ source  ──►  macos/shim/include/windows.h  ──►  Cocoa/AppKit
+        (PowerEditor/)              (header-only Win32 API)         (NSWindow, NSMenu, …)
+
+Application entry point & UI shell:  macos/platform/*.mm  (Objective-C++)
 ```
 
-### Key Source Files
+- **`macos/shim/`** — header-only Win32 API surface (`windows.h`, `winuser.h`, etc.) plus `.mm` implementations that back Win32 calls with Cocoa. **Does NOT define `WIN32`/`_WIN32`** — defining them breaks C++ stdlib on macOS. Code that needs to branch on platform should use `__APPLE__`.
+- **`macos/platform/`** — the macOS app itself (entry point in `app_main.mm`, app delegate, menu builder, find/replace, doc manager, lexer styles, language defs, panels). This is where most macOS-specific work lands.
+- **`macos/platform/scintilla_bridge.*`** — **critical isolation layer.** Scintilla's `ScintillaView.h` defines `WM_COMMAND`/`WM_NOTIFY` as `1001`/`1002`, which collide with the shim's real Win32 values (`0x0111`/`0x004E`). The bridge exposes a small C API (`ScintillaBridge_createView`, `ScintillaBridge_sendMessage`, `ScintillaBridge_setNotifyCallback`) compiled **without** the Win32 shim force-include, so Scintilla's headers never see shim symbols. When touching Scintilla integration, route through this bridge — do not include `ScintillaView.h` from Win32-shim translation units.
+- **Global state** lives in `macos/platform/app_state.h` as `AppContext& ctx()` — a singleton that holds Scintilla views, document list, active tab, find/replace state, and HWND handles. This is a deliberate simplification to ease Win32-codebase migration; treat reads/writes as the migration path's compromise rather than a pattern to extend.
 
-| File | Role |
-|------|------|
-| `PowerEditor/src/winmain.cpp` | Entry point, instance management |
-| `PowerEditor/src/Notepad_plus.cpp` | Core app logic (~361KB), manages views, tabs, file ops |
-| `PowerEditor/src/NppBigSwitch.cpp` | WM_COMMAND message dispatcher |
-| `PowerEditor/src/NppCommands.cpp` | Menu command implementations |
-| `PowerEditor/src/NppNotification.cpp` | Notification handlers |
-| `PowerEditor/src/NppIO.cpp` | File I/O operations |
-| `PowerEditor/src/Parameters.cpp` | NppParameters singleton (~352KB), config loading/saving |
-| `PowerEditor/src/ScintillaComponent/ScintillaEditView.cpp` | Editor view wrapper |
-| `PowerEditor/src/ScintillaComponent/Buffer.cpp` | Buffer/FileManager - document management |
-| `PowerEditor/src/MISC/PluginsManager/PluginsManager.cpp` | Plugin loading and management |
-| `PowerEditor/src/MISC/PluginsManager/Notepad_plus_msgs.h` | Plugin message API definitions |
-| `PowerEditor/src/MISC/PluginsManager/PluginInterface.h` | Plugin DLL interface contract |
+### Upstream Notepad++ core (`PowerEditor/src/`)
 
-### Source Directory Layout (PowerEditor/src/)
+The Win32 code is largely untouched. Message flow:
 
-- **ScintillaComponent/** - Editor views, buffers, find/replace, auto-completion, printing
-- **WinControls/** - All UI controls: docking windows, dialogs, toolbars, panels (FunctionList, FileBrowser, DocumentMap, ProjectPanel, etc.)
-- **MISC/** - Plugin manager, common utilities, hashing (md5/sha), registry, exception handling
-- **DarkMode/** - Dark mode theming
-- **uchardet/** - Character encoding detection (vendored)
-- **pugixml/** - XML parsing (vendored)
-- **json/** - JSON parsing
+```
+winmain.cpp → Notepad_plus_Window (window/loop) → Notepad_plus (core)
+                                                    ├─ ScintillaEditView ×2 (main + sub views)
+                                                    ├─ DocTabView ×2
+                                                    ├─ FileManager singleton (Buffer.h, owns all Buffers)
+                                                    ├─ NppParameters singleton (Parameters.cpp, XML config)
+                                                    ├─ PluginsManager
+                                                    └─ DockingManager
+```
 
-### Vendored Dependencies (not git submodules)
+Message dispatch is split across `NppBigSwitch.cpp` (window proc / `Notepad_plus::process`), `NppCommands.cpp` (menu commands / `Notepad_plus::command`), `NppNotification.cpp` (Scintilla/tab notifications), and `NppIO.cpp` (file I/O).
 
-- **scintilla/** - Scintilla editor component, built as `libScintilla.lib`
-- **lexilla/** - Lexilla lexer library (~130 lexers), built as `libLexilla.lib`
-- **boostregex/** - Stripped Boost 1.90.0 for PCRE regex (used instead of ECMAScript regex)
+### Vendored, not submoduled
 
-### Plugin System
+- `scintilla/` — Scintilla editor component
+- `lexilla/` — ~130 lexers
+- `boostregex/` — stripped Boost 1.90.0 (PCRE regex; chosen over ECMAScript)
+- `PowerEditor/src/{uchardet,pugixml,json}/`
 
-Plugins are DLLs exporting a C interface defined in `PluginInterface.h`. Required exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`. Communication uses Windows messages defined in `Notepad_plus_msgs.h`.
+### Plugins
+
+Windows plugin contract in `PowerEditor/src/MISC/PluginsManager/PluginInterface.h` (exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`) using messages from `Notepad_plus_msgs.h`. macOS-side plugin scaffolding lives under `macos/plugin-sdk/` (early WIP).
 
 ## Coding Style
 
-- **Braces**: Allman style (braces on their own line). Exception: single-line method definitions in headers may use Java-style.
-- **Indentation**: Tabs (display width typically 4 spaces)
-- **Naming**: PascalCase for classes, camelCase for methods/parameters, underscore prefix for member variables (`_memberVar`)
-- **Operators**: Spaces around binary/ternary operators
-- **Casts**: C++ casts only (`static_cast<>`, not C-style)
-- **Logical ops**: Use `!`, `&&`, `||` (not `not`, `and`, `or`)
-- **Increment**: Prefer pre-increment (`++i`)
-- **Init**: Use `{}` brace initialization for non-primitives, `=` for primitives/enums
-- **Modern C++**: Use C++11/14/17/20 features. Prefer `constexpr` over `const`. Prefer `unique_ptr` over `shared_ptr`. Avoid raw `new`.
-- **Strings**: Use `empty()` not `!= ""`
-- **Comments**: C++ line style (`//`), not C block style (`/* */`)
-- **No Yoda conditions**: Write `if (x == true)` not `if (true == x)`
-- **No `using namespace` in headers**
-
-## CI
-
-GitHub Actions workflow (`.github/workflows/CI_build.yml`) builds with MSBuild (all 6 platform/config combos), CMake (Release/x64), and MSYS2 GCC/Clang. Tests run on Win32/Debug only.
+Allman braces, tabs, PascalCase classes, camelCase methods, `_memberVar` for fields, C++ casts only, pre-increment, `{}` init for non-primitives. C++20. No `using namespace` in headers. Full rules in upstream `CONTRIBUTING.md` — keep patches compact and avoid whitespace churn.

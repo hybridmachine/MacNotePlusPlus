@@ -10,6 +10,8 @@
 #include <vector>
 #include <string>
 
+struct FileWatchContext;
+
 // Helper: wchar_t (UTF-32) → NSString → std::string (UTF-8)
 static std::string WideToUTF8(const std::wstring& ws)
 {
@@ -40,6 +42,16 @@ struct FileMonitorMac::Impl
 	FileMonitorCallback callback;
 	std::vector<FSEventStreamRef> streams;
 	std::vector<std::wstring> watchedPaths;
+
+	// Per-file watch streams: parallel arrays keyed by full file path. The
+	// per-stream FSEvents context info pointer is owned by `fileContexts` here so
+	// we can free it on removeFilePath()/terminate() without needing to query
+	// the stream back (FSEventStreamCopyContext doesn't exist).
+	std::vector<FSEventStreamRef> fileStreams;
+	std::vector<std::wstring> watchedFiles;
+	std::vector<FileMonitorCallback> fileCallbacks;
+	std::vector<FileWatchContext*> fileContexts;
+
 	bool terminated = false;
 };
 
@@ -82,6 +94,67 @@ static void fseventsCallback(ConstFSEventStreamRef streamRef,
 
 		if (impl->callback)
 			impl->callback(action, widePath);
+	}
+}
+
+// Per-file FSEvents callback. The stream watches a single path; the per-file
+// callback was paired with that stream at addFilePath() time via context.info.
+struct FileWatchContext
+{
+	FileMonitorMac::Impl* impl;
+	std::wstring watchedPath;
+};
+
+static void fileWatchCallback(ConstFSEventStreamRef /*streamRef*/,
+                               void* clientCallBackInfo,
+                               size_t numEvents,
+                               void* eventPaths,
+                               const FSEventStreamEventFlags eventFlags[],
+                               const FSEventStreamEventId /*eventIds*/[])
+{
+	auto* fwc = static_cast<FileWatchContext*>(clientCallBackInfo);
+	CFArrayRef pathArray = static_cast<CFArrayRef>(eventPaths);
+
+	for (size_t i = 0; i < numEvents; ++i)
+	{
+		FileMonitorAction action;
+		FSEventStreamEventFlags flags = eventFlags[i];
+
+		if (flags & kFSEventStreamEventFlagItemRemoved)
+			action = FileMonitorAction::Removed;
+		else if (flags & kFSEventStreamEventFlagItemRenamed)
+			action = FileMonitorAction::RenamedNew;
+		else if (flags & kFSEventStreamEventFlagItemCreated)
+			action = FileMonitorAction::Added;
+		else
+			action = FileMonitorAction::Modified;
+
+		CFStringRef cfPath = static_cast<CFStringRef>(CFArrayGetValueAtIndex(pathArray, i));
+		NSString* nsPath = (__bridge NSString*)cfPath;
+		std::wstring widePath = UTF8ToWide([nsPath UTF8String]);
+
+		FileMonitorCallback globalCallback;
+		FileMonitorCallback fileCallback;
+		if (fwc && fwc->impl)
+		{
+			std::lock_guard<std::mutex> lock(fwc->impl->mutex);
+			fwc->impl->eventQueue.push({action, widePath});
+			globalCallback = fwc->impl->callback;
+
+			for (size_t j = 0; j < fwc->impl->watchedFiles.size(); ++j)
+			{
+				if (fwc->impl->watchedFiles[j] == fwc->watchedPath)
+				{
+					fileCallback = fwc->impl->fileCallbacks[j];
+					break;
+				}
+			}
+		}
+
+		if (globalCallback)
+			globalCallback(action, widePath);
+		if (fileCallback)
+			fileCallback(action, widePath);
 	}
 }
 
@@ -153,6 +226,95 @@ void FileMonitorMac::removeDirectory(const std::wstring& path)
 	}
 }
 
+bool FileMonitorMac::addFilePath(const std::wstring& path, FileMonitorCallback callback)
+{
+	std::lock_guard<std::mutex> lock(m_impl->mutex);
+	if (m_impl->terminated) return false;
+
+	std::string utf8Path = WideToUTF8(path);
+	if (utf8Path.empty()) return false;
+
+	// If already watching, replace the callback in-place.
+	for (size_t i = 0; i < m_impl->watchedFiles.size(); ++i)
+	{
+		if (m_impl->watchedFiles[i] == path)
+		{
+			m_impl->fileCallbacks[i] = std::move(callback);
+			return true;
+		}
+	}
+
+	NSString* nsPath = [NSString stringWithUTF8String:utf8Path.c_str()];
+	CFStringRef cfPath = (__bridge CFStringRef)nsPath;
+	CFArrayRef pathsToWatch = CFArrayCreate(nullptr, (const void**)&cfPath, 1, &kCFTypeArrayCallBacks);
+
+	// Heap-allocated context: identifies which watched file this stream belongs to.
+	// Freed in removeFilePath()/terminate().
+	auto* fwc = new FileWatchContext{m_impl, path};
+
+	FSEventStreamContext context = {};
+	context.info = fwc;
+
+	FSEventStreamRef stream = FSEventStreamCreate(
+		nullptr,
+		&fileWatchCallback,
+		&context,
+		pathsToWatch,
+		kFSEventStreamEventIdSinceNow,
+		0.1, // low latency for log tailing
+		kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagUseCFTypes
+	);
+
+	CFRelease(pathsToWatch);
+
+	if (!stream)
+	{
+		delete fwc;
+		return false;
+	}
+
+	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
+	FSEventStreamStart(stream);
+
+	m_impl->fileStreams.push_back(stream);
+	m_impl->watchedFiles.push_back(path);
+	m_impl->fileCallbacks.push_back(std::move(callback));
+	m_impl->fileContexts.push_back(fwc);
+
+	return true;
+}
+
+void FileMonitorMac::removeFilePath(const std::wstring& path)
+{
+	FSEventStreamRef streamToStop = nullptr;
+	FileWatchContext* ctxToFree = nullptr;
+
+	{
+		std::lock_guard<std::mutex> lock(m_impl->mutex);
+		for (size_t i = 0; i < m_impl->watchedFiles.size(); ++i)
+		{
+			if (m_impl->watchedFiles[i] == path)
+			{
+				streamToStop = m_impl->fileStreams[i];
+				ctxToFree = m_impl->fileContexts[i];
+				m_impl->fileStreams.erase(m_impl->fileStreams.begin() + i);
+				m_impl->watchedFiles.erase(m_impl->watchedFiles.begin() + i);
+				m_impl->fileCallbacks.erase(m_impl->fileCallbacks.begin() + i);
+				m_impl->fileContexts.erase(m_impl->fileContexts.begin() + i);
+				break;
+			}
+		}
+	}
+
+	if (streamToStop)
+	{
+		FSEventStreamStop(streamToStop);
+		FSEventStreamInvalidate(streamToStop);
+		FSEventStreamRelease(streamToStop);
+	}
+	delete ctxToFree;
+}
+
 void FileMonitorMac::setCallback(FileMonitorCallback callback)
 {
 	std::lock_guard<std::mutex> lock(m_impl->mutex);
@@ -177,6 +339,8 @@ void FileMonitorMac::terminate()
 	// FSEventStreamStop can block waiting for in-flight callbacks that
 	// also acquire the mutex, so holding it here would deadlock.
 	std::vector<FSEventStreamRef> streamsToStop;
+	std::vector<FSEventStreamRef> fileStreamsToStop;
+	std::vector<FileWatchContext*> fileContextsToFree;
 	{
 		std::lock_guard<std::mutex> lock(m_impl->mutex);
 		if (m_impl->terminated) return;
@@ -185,6 +349,13 @@ void FileMonitorMac::terminate()
 		streamsToStop = std::move(m_impl->streams);
 		m_impl->streams.clear();
 		m_impl->watchedPaths.clear();
+
+		fileStreamsToStop = std::move(m_impl->fileStreams);
+		fileContextsToFree = std::move(m_impl->fileContexts);
+		m_impl->fileStreams.clear();
+		m_impl->watchedFiles.clear();
+		m_impl->fileCallbacks.clear();
+		m_impl->fileContexts.clear();
 	}
 
 	for (auto stream : streamsToStop)
@@ -193,4 +364,12 @@ void FileMonitorMac::terminate()
 		FSEventStreamInvalidate(stream);
 		FSEventStreamRelease(stream);
 	}
+	for (auto stream : fileStreamsToStop)
+	{
+		FSEventStreamStop(stream);
+		FSEventStreamInvalidate(stream);
+		FSEventStreamRelease(stream);
+	}
+	for (auto* fwc : fileContextsToFree)
+		delete fwc;
 }

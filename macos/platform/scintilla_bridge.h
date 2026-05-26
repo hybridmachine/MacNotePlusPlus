@@ -34,6 +34,9 @@ void* ScintillaBridge_getDirectPointer(void* scintillaView);
 // Resize the ScintillaView to fill its superview's bounds.
 void ScintillaBridge_resizeToFit(void* scintillaView);
 
+// Give focus back to the Scintilla view and restore Scintilla's internal focus state.
+void ScintillaBridge_focus(void* scintillaView);
+
 // Notification callback type.
 // iMessage is either 1001 (WM_COMMAND in Cocoa Scintilla) or 1002 (WM_NOTIFY in Cocoa Scintilla).
 typedef void (*ScintillaBridgeNotifyFunc)(intptr_t windowid, unsigned int iMessage,
@@ -43,6 +46,9 @@ typedef void (*ScintillaBridgeNotifyFunc)(intptr_t windowid, unsigned int iMessa
 // windowid: opaque value passed back in the callback (typically the HWND).
 void ScintillaBridge_setNotifyCallback(void* scintillaView, intptr_t windowid,
                                         ScintillaBridgeNotifyFunc callback);
+
+// Clear the notification callback on a ScintillaView (call before destroy).
+void ScintillaBridge_clearNotifyCallback(void* scintillaView);
 
 #ifdef __cplusplus
 }

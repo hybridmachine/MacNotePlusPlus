@@ -36,6 +36,7 @@ struct WindowInfo
 	bool isScintilla = false;
 	LPARAM createParam = 0;        // lpParam from CreateWindowEx
 	ControlType controlType = static_cast<ControlType>(0); // ControlType::None
+	bool enabled = true;           // EnableWindow/IsWindowEnabled state
 };
 
 // Registered window class info (from RegisterClass/RegisterClassEx)

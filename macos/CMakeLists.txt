@@ -1,12 +1,37 @@
 cmake_minimum_required(VERSION 3.20)
-project(NotepadPlusPlusMac LANGUAGES C CXX OBJC OBJCXX)
+project(PaperWaspMac LANGUAGES C CXX OBJC OBJCXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 20)
 
-# Root of the Notepad++ source tree
+# Root of the upstream Notepad++ source tree
 set(NPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(PAPERWASP_APP_NAME "PaperWasp")
+set(PAPERWASP_BUNDLE_IDENTIFIER "com.softcentral.paperwasp")
+
+# ============================================================
+# Code Signing Configuration (opt-in)
+# ============================================================
+option(CODESIGN_ENABLED "Enable code signing for the app bundle and DMG" OFF)
+set(CODESIGN_IDENTITY "Developer ID Application" CACHE STRING
+    "Code signing identity (e.g., 'Developer ID Application: Your Name (TEAMID)')")
+set(CODESIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/platform/PaperWasp.entitlements" CACHE FILEPATH
+    "Path to entitlements plist for hardened runtime")
+
+if(CODESIGN_ENABLED)
+    # Escape parentheses for Xcode generator shell scripts
+    string(REPLACE "(" "\\(" CODESIGN_IDENTITY "${CODESIGN_IDENTITY}")
+    string(REPLACE ")" "\\)" CODESIGN_IDENTITY "${CODESIGN_IDENTITY}")
+    message(STATUS "Code signing: ENABLED")
+    message(STATUS "  Identity: ${CODESIGN_IDENTITY}")
+    message(STATUS "  Entitlements: ${CODESIGN_ENTITLEMENTS}")
+    if(NOT EXISTS "${CODESIGN_ENTITLEMENTS}")
+        message(FATAL_ERROR "Entitlements file not found: ${CODESIGN_ENTITLEMENTS}")
+    endif()
+else()
+    message(STATUS "Code signing: DISABLED (pass -DCODESIGN_ENABLED=ON to enable)")
+endif()
 
 # ============================================================
 # Win32 Shim Library
@@ -20,6 +45,7 @@ file(GLOB SHIM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shim/src/*.mm")
 add_library(win32shim STATIC ${SHIM_SOURCES})
 target_include_directories(win32shim
     PUBLIC "${SHIM_INCLUDE_DIR}"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/shim/src"
 )
 target_compile_options(win32shim PRIVATE
     -Wno-deprecated-declarations
@@ -121,20 +147,20 @@ add_library(uchardet STATIC ${UCHARDET_SOURCES})
 target_include_directories(uchardet PUBLIC "${UCHARDET_DIR}")
 
 # ============================================================
-# Notepad++ PowerEditor Sources (Phase 0: non-GUI subset)
+# Notepad++ PowerEditor Sources (compatibility compile subset)
 # ============================================================
 set(NPP_SRC_DIR "${NPP_ROOT}/PowerEditor/src")
 
-# For Phase 0, we compile a minimal subset to verify the shim works.
+# We compile a minimal subset to verify the shim works.
 # These files are core logic that should compile with the shim headers.
-# More files will be added in subsequent phases.
+# This target is for compilation verification only.
 
-# Phase 0 target: just verify the shim + vendored libs compile
+# Compile-test target: just verify the shim + vendored libs compile
 # and that key N++ headers can be parsed.
-# Phase 0: Compile a simple test file that includes key N++ headers
+# Compile a simple test file that includes key N++ headers
 # through the shim layer. Actual N++ source files will be added
 # incrementally as we stub out more Windows-only headers.
-add_library(npp_phase0_test STATIC
+add_library(npp_macos_compile_test STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/npp_headers_test.cpp"
     "${NPP_SRC_DIR}/MISC/sha2/sha-256.cpp"
     "${NPP_SRC_DIR}/Utf8_16.cpp"
@@ -182,12 +208,12 @@ file(GLOB_RECURSE NPP_WINCONTROLS_SOURCES "${NPP_SRC_DIR}/WinControls/*.cpp")
 list(FILTER NPP_WINCONTROLS_SOURCES EXCLUDE REGEX "ReadDirectoryChanges")
 list(FILTER NPP_WINCONTROLS_SOURCES EXCLUDE REGEX "CustomFileDialog")  # Uses IFileDialog COM - replace with NSOpenPanel/NSSavePanel
 list(FILTER NPP_WINCONTROLS_SOURCES EXCLUDE REGEX "pluginsAdmin")      # Uses WinInet - replace with NSURLSession
-target_sources(npp_phase0_test PRIVATE ${NPP_WINCONTROLS_SOURCES})
+target_sources(npp_macos_compile_test PRIVATE ${NPP_WINCONTROLS_SOURCES})
 # Gather all subdirectories under WinControls/ for includes
 file(GLOB NPP_WINCONTROLS_DIRS "${NPP_SRC_DIR}/WinControls/*/")
 file(GLOB NPP_MISC_DIRS "${NPP_SRC_DIR}/MISC/*/")
 
-target_include_directories(npp_phase0_test
+target_include_directories(npp_macos_compile_test
     PRIVATE "${SHIM_INCLUDE_DIR}"     # Must be first!
     PRIVATE "${NPP_SRC_DIR}"
     PRIVATE "${NPP_SRC_DIR}/MISC"
@@ -205,7 +231,7 @@ target_include_directories(npp_phase0_test
     PRIVATE "${PUGIXML_DIR}"
     PRIVATE "${UCHARDET_DIR}"
 )
-target_compile_definitions(npp_phase0_test PRIVATE
+target_compile_definitions(npp_macos_compile_test PRIVATE
     UNICODE
     _UNICODE
     __APPLE__
@@ -214,7 +240,7 @@ target_compile_definitions(npp_phase0_test PRIVATE
     "NPP_LEXILLA_VERSION=\"5.4.0\""
     "NPP_BOOST_REGEX_VERSION=\"1.90.0\""
 )
-target_compile_options(npp_phase0_test PRIVATE
+target_compile_options(npp_macos_compile_test PRIVATE
     -Wno-deprecated-declarations
     -Wno-writable-strings
     -Wno-unused-parameter
@@ -223,17 +249,17 @@ target_compile_options(npp_phase0_test PRIVATE
     -Wno-c++11-narrowing
     -include "${SHIM_INCLUDE_DIR}/windows.h"
 )
-target_link_libraries(npp_phase0_test
+target_link_libraries(npp_macos_compile_test
     win32shim
     pugixml
     uchardet
 )
 
 # ============================================================
-# Phase 0 verification target
+# Compatibility verification target
 # ============================================================
 # This executable just links everything together to verify compilation.
-# It's not a runnable app yet - that comes in Phase 1.
+# It's not the primary runnable app target.
 add_executable(npp_build_test
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/build_test.mm"
 )
@@ -284,52 +310,101 @@ target_link_libraries(win32shim PUBLIC
 )
 
 # ============================================================
-# Phase 2: File I/O + Menus App
+# App icon generation (.icns from logo.png)
 # ============================================================
-# Win32 menu APIs backed by NSMenu, file open/save via dialogs,
-# WM_COMMAND dispatch from menus to WndProc, timers, clipboard.
-add_executable(npp_phase2_app
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/main.mm"
+set(ICONSET_DIR "${CMAKE_BINARY_DIR}/AppIcon.iconset")
+add_custom_command(
+    OUTPUT "${CMAKE_BINARY_DIR}/AppIcon.icns"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${ICONSET_DIR}"
+    COMMAND sips -z 16 16     "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_16x16.png"
+    COMMAND sips -z 32 32     "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_16x16@2x.png"
+    COMMAND sips -z 32 32     "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_32x32.png"
+    COMMAND sips -z 64 64     "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_32x32@2x.png"
+    COMMAND sips -z 128 128   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_128x128.png"
+    COMMAND sips -z 256 256   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_128x128@2x.png"
+    COMMAND sips -z 256 256   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_256x256.png"
+    COMMAND sips -z 512 512   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_256x256@2x.png"
+    COMMAND sips -z 512 512   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_512x512.png"
+    COMMAND sips -z 583 583   "${NPP_ROOT}/logo.png" --out "${ICONSET_DIR}/icon_512x512@2x.png"
+    COMMAND iconutil -c icns "${ICONSET_DIR}" -o "${CMAKE_BINARY_DIR}/AppIcon.icns"
+    DEPENDS "${NPP_ROOT}/logo.png"
+    COMMENT "Generating AppIcon.icns from logo.png"
 )
-target_include_directories(npp_phase2_app PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform"
-    "${SHIM_INCLUDE_DIR}"
-    "${SCINTILLA_INCLUDE_DIR}"
-    "${LEXILLA_INCLUDE_DIR}"
-)
-target_link_libraries(npp_phase2_app
-    win32shim
-    scintilla_bridge
-    Scintilla
-    Lexilla
-    pugixml
-    uchardet
-    "-framework Foundation"
-    "-framework AppKit"
-    "-framework QuartzCore"
-    "-framework UniformTypeIdentifiers"
-)
-target_compile_options(npp_phase2_app PRIVATE
-    -fobjc-arc
-    -Wno-deprecated-declarations
-)
+add_custom_target(AppIcon DEPENDS "${CMAKE_BINARY_DIR}/AppIcon.icns")
 
 # ============================================================
-# Phase 3: Tabs + Multi-Document App
+# Main macOS app target
 # ============================================================
-# Tab control (SysTabControl32), status bar (msctls_statusbar32),
-# WM_NOTIFY dispatch, file monitoring via FSEvents, multi-document editing.
-add_executable(npp_phase3_app
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/main_phase3.mm"
+add_executable(PaperWasp
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_main.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_state.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/app_delegate.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/document_manager.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_operations.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/find_replace.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/edit_commands.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/split_view.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/session_manager.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/preferences_dialog.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/menu_builder.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/wndproc.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/appearance.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/scintilla_config.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/change_history.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/lexer_styles.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/language_defs.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/bookmarks.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/autocomplete.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/context_menu.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/status_bar.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/recent_files.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/settings_manager.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_monitor_mac.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/save_prompt.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/about_dialog.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/keyboard_shortcuts.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/brace_match.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/auto_indent.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/auto_close.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/sync_scroll.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/document_map.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/function_list_parser.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/function_list_panel.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/clipboard_history_panel.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/panel_divider.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/panel_layout.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_switcher_panel.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_browser_panel.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_path_ops.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/tab_bar_view.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/tab_context_menu.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/age_bar_view.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/follow_mode.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/smart_highlight.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/incremental_search.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/find_in_files.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/search_results_panel.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/toolbar.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/print_support.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/hash_tools.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/macro_manager.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_manager.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_docking.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/nppm_handler.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/compare_plus_visibility.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_invariants.mm"
 )
-target_include_directories(npp_phase3_app PRIVATE
+target_include_directories(PaperWasp PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/platform"
     "${SHIM_INCLUDE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shim/src"
     "${SCINTILLA_INCLUDE_DIR}"
     "${LEXILLA_INCLUDE_DIR}"
+    "${UCHARDET_DIR}"
+    "${NPP_SRC_DIR}/MISC/PluginsManager"
+    "${NPP_SRC_DIR}/WinControls/DockingWnd"
 )
-target_link_libraries(npp_phase3_app
+target_link_libraries(PaperWasp
     win32shim
     scintilla_bridge
     Scintilla
@@ -342,117 +417,332 @@ target_link_libraries(npp_phase3_app
     "-framework UniformTypeIdentifiers"
     "-framework CoreServices"
 )
-target_compile_options(npp_phase3_app PRIVATE
+target_compile_options(PaperWasp PRIVATE
     -fobjc-arc
     -Wno-deprecated-declarations
 )
+# Export symbols so plugins loaded via dlopen can resolve host functions.
+# -force_load pulls every object from libwin32shim.a into the executable,
+# so plugin-only shim APIs (PathAppendW, GetPrivateProfileIntW, etc.) are
+# present in the dynamic symbol table — without it, ld drops any shim
+# .o the host itself doesn't reference, and plugins crash at runtime
+# calling through a null function pointer.
+target_link_options(PaperWasp PRIVATE
+    -Wl,-export_dynamic
+    "LINKER:-force_load,$<TARGET_FILE:win32shim>"
+)
+add_dependencies(PaperWasp AppIcon)
+add_custom_command(TARGET PaperWasp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${NPP_ROOT}/logo.png"
+        "$<TARGET_FILE_DIR:PaperWasp>/logo.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${NPP_ROOT}/about.png"
+        "$<TARGET_FILE_DIR:PaperWasp>/about.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_BINARY_DIR}/AppIcon.icns"
+        "$<TARGET_FILE_DIR:PaperWasp>/AppIcon.icns"
+    COMMENT "Copying logo.png, about.png, and AppIcon.icns"
+)
 
 # ============================================================
-# Phase 4: Find/Replace + Essential Dialogs App
+# Sample plugin: HelloPaperWasp
 # ============================================================
-# Dialog subsystem, Find/Replace, Go To Line, dialog controls
-# (Button, Edit, Static, CheckBox), GetDlgItem, dark mode.
-add_executable(npp_phase4_app
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/main_phase4.mm"
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_monitor_mac.mm"
+add_library(HelloPaperWasp MODULE
+    "${CMAKE_CURRENT_SOURCE_DIR}/plugin-sdk/example/HelloPaperWasp/HelloPaperWasp.cpp"
 )
-target_include_directories(npp_phase4_app PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform"
+target_include_directories(HelloPaperWasp PRIVATE
     "${SHIM_INCLUDE_DIR}"
+    "${NPP_SRC_DIR}/MISC/PluginsManager"
     "${SCINTILLA_INCLUDE_DIR}"
-    "${LEXILLA_INCLUDE_DIR}"
 )
-target_link_libraries(npp_phase4_app
-    win32shim
-    scintilla_bridge
-    Scintilla
-    Lexilla
-    pugixml
-    uchardet
-    "-framework Foundation"
-    "-framework AppKit"
-    "-framework QuartzCore"
-    "-framework UniformTypeIdentifiers"
-    "-framework CoreServices"
+set_target_properties(HelloPaperWasp PROPERTIES
+    PREFIX ""
+    SUFFIX ".dylib"
+    OUTPUT_NAME "HelloPaperWasp"
 )
-target_compile_options(npp_phase4_app PRIVATE
-    -fobjc-arc
-    -Wno-deprecated-declarations
+target_compile_options(HelloPaperWasp PRIVATE -Wno-deprecated-declarations)
+target_link_options(HelloPaperWasp PRIVATE -undefined dynamic_lookup)
+
+# Opt-in install target: cmake --build . --target install_sample_plugin
+add_custom_target(install_sample_plugin
+    DEPENDS HelloPaperWasp
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/HelloPaperWasp"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:HelloPaperWasp>"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/HelloPaperWasp/HelloPaperWasp.dylib"
+    COMMENT "Installing HelloPaperWasp plugin to ~/Library/Application Support/PaperWasp/plugins/"
 )
 
 # ============================================================
-# Phase 5: Advanced Editor Features App
+# Plugin: ComparePlus (macOS port)
 # ============================================================
-# Regex search, recent files, bookmarks, auto-completion,
-# context menus, preferences dialog, language selection.
-add_executable(npp_phase5_app
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/main_phase5.mm"
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_monitor_mac.mm"
+set(COMPARE_PLUS_DIR "${NPP_ROOT}/plugins/comparePlus")
+
+add_library(ComparePlus MODULE
+    "${COMPARE_PLUS_DIR}/src/Compare.cpp"
+    "${COMPARE_PLUS_DIR}/src/NppHelpers.cpp"
+    "${COMPARE_PLUS_DIR}/src/Tools.cpp"
+    "${COMPARE_PLUS_DIR}/src/Strings.cpp"
+    "${COMPARE_PLUS_DIR}/src/UserSettings.cpp"
+    "${COMPARE_PLUS_DIR}/src/Engine/Engine.cpp"
+    "${COMPARE_PLUS_DIR}/src/NppAPI/DockingFeature/StaticDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/CompareOptionsDlg/CompareOptionsDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/VisualFiltersDlg/VisualFiltersDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/SettingsDlg/SettingsDialog.cpp"
+    "${COMPARE_PLUS_DIR}/src/macOS/ColorComboMac.mm"
+    "${COMPARE_PLUS_DIR}/src/macOS/MacCompatStubs.cpp"
 )
-target_include_directories(npp_phase5_app PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform"
+target_include_directories(ComparePlus PRIVATE
     "${SHIM_INCLUDE_DIR}"
+    "${COMPARE_PLUS_DIR}/src/NppAPI"
+    "${COMPARE_PLUS_DIR}/src"
+    "${COMPARE_PLUS_DIR}/src/Engine"
+    "${COMPARE_PLUS_DIR}/src/Icons"
+    "${COMPARE_PLUS_DIR}/src/nlohmann"
+    "${COMPARE_PLUS_DIR}/src/AboutDlg"
+    "${COMPARE_PLUS_DIR}/src/SettingsDlg"
+    "${COMPARE_PLUS_DIR}/src/CompareOptionsDlg"
+    "${COMPARE_PLUS_DIR}/src/VisualFiltersDlg"
+    "${COMPARE_PLUS_DIR}/src/NavDlg"
+    "${COMPARE_PLUS_DIR}/src/ProgressDlg"
+    "${COMPARE_PLUS_DIR}/src/NppAPI/DockingFeature"
+    "${COMPARE_PLUS_DIR}/src/boost_regex/include"
     "${SCINTILLA_INCLUDE_DIR}"
-    "${LEXILLA_INCLUDE_DIR}"
 )
-target_link_libraries(npp_phase5_app
-    win32shim
-    scintilla_bridge
-    Scintilla
-    Lexilla
-    pugixml
-    uchardet
-    "-framework Foundation"
+target_compile_definitions(ComparePlus PRIVATE
+    UNICODE
+    _UNICODE
+    BOOST_REGEX_STANDALONE
+)
+set_target_properties(ComparePlus PROPERTIES
+    PREFIX ""
+    SUFFIX ".dylib"
+    OUTPUT_NAME "ComparePlus"
+)
+target_compile_options(ComparePlus PRIVATE -Wno-deprecated-declarations)
+target_link_options(ComparePlus PRIVATE -undefined dynamic_lookup)
+target_link_libraries(ComparePlus PRIVATE
     "-framework AppKit"
-    "-framework QuartzCore"
-    "-framework UniformTypeIdentifiers"
-    "-framework CoreServices"
+    "-framework Foundation"
 )
-target_compile_options(npp_phase5_app PRIVATE
-    -fobjc-arc
-    -Wno-deprecated-declarations
+
+add_custom_target(install_compare_plus
+    DEPENDS ComparePlus
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/ComparePlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:ComparePlus>"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/ComparePlus/ComparePlus.dylib"
+    COMMENT "Installing ComparePlus plugin to ~/Library/Application Support/PaperWasp/plugins/"
 )
 
 # ============================================================
-# Phase 6: Syntax Highlighting + Code Folding App
+# Plugin: MarkdownViewerPlusPlus (macOS native port)
 # ============================================================
-# Real syntax highlighting via Lexilla lexers, per-lexer style tables,
-# code folding with box-style margin markers, fold/unfold commands.
-add_executable(npp_phase6_app
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/main_phase6.mm"
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform/file_monitor_mac.mm"
+set(MARKDOWN_VIEWER_PLUS_PLUS_DIR "${NPP_ROOT}/plugins/markdownViewerPlusPlus")
+
+add_library(MarkdownViewerPlusPlus MODULE
+    "${MARKDOWN_VIEWER_PLUS_PLUS_DIR}/src/macOS/MarkdownViewerPlusPlus.mm"
 )
-target_include_directories(npp_phase6_app PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/platform"
+target_include_directories(MarkdownViewerPlusPlus PRIVATE
     "${SHIM_INCLUDE_DIR}"
+    "${NPP_SRC_DIR}/MISC/PluginsManager"
+    "${NPP_SRC_DIR}/WinControls/DockingWnd"
     "${SCINTILLA_INCLUDE_DIR}"
-    "${LEXILLA_INCLUDE_DIR}"
 )
-target_link_libraries(npp_phase6_app
-    win32shim
-    scintilla_bridge
-    Scintilla
-    Lexilla
-    pugixml
-    uchardet
-    "-framework Foundation"
-    "-framework AppKit"
-    "-framework QuartzCore"
-    "-framework UniformTypeIdentifiers"
-    "-framework CoreServices"
+target_compile_definitions(MarkdownViewerPlusPlus PRIVATE
+    UNICODE
+    _UNICODE
 )
-target_compile_options(npp_phase6_app PRIVATE
+set_target_properties(MarkdownViewerPlusPlus PROPERTIES
+    PREFIX ""
+    SUFFIX ".dylib"
+    OUTPUT_NAME "MarkdownViewerPlusPlus"
+)
+target_compile_options(MarkdownViewerPlusPlus PRIVATE
     -fobjc-arc
     -Wno-deprecated-declarations
 )
+target_link_options(MarkdownViewerPlusPlus PRIVATE -undefined dynamic_lookup)
+target_link_libraries(MarkdownViewerPlusPlus PRIVATE
+    "-framework AppKit"
+    "-framework Foundation"
+    "-framework WebKit"
+)
 
-message(STATUS "=== Notepad++ macOS Port ===")
-message(STATUS "Phase 0: Shim compilation test (npp_phase0_test)")
-message(STATUS "Phase 2: File I/O + Menus app (npp_phase2_app)")
-message(STATUS "Phase 3: Tabs + Multi-Document app (npp_phase3_app)")
-message(STATUS "Phase 4: Find/Replace + Dialogs app (npp_phase4_app)")
-message(STATUS "Phase 5: Advanced Editor Features app (npp_phase5_app)")
-message(STATUS "Phase 6: Syntax Highlighting + Code Folding app (npp_phase6_app)")
+add_custom_target(install_markdown_viewer_plus_plus
+    DEPENDS MarkdownViewerPlusPlus
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/MarkdownViewerPlusPlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:MarkdownViewerPlusPlus>"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/MarkdownViewerPlusPlus/MarkdownViewerPlusPlus.dylib"
+    COMMENT "Installing MarkdownViewerPlusPlus plugin to ~/Library/Application Support/PaperWasp/plugins/"
+)
+
+# ============================================================
+# Packaging: App bundle, code signing, and DMG
+# ============================================================
+set(NPP_MACOS_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dist")
+set(NPP_MACOS_APP_BUNDLE "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.app")
+set(NPP_MACOS_APP_CONTENTS "${NPP_MACOS_APP_BUNDLE}/Contents")
+set(NPP_MACOS_APP_MACOS "${NPP_MACOS_APP_CONTENTS}/MacOS")
+set(NPP_MACOS_APP_RESOURCES "${NPP_MACOS_APP_CONTENTS}/Resources")
+set(NPP_MACOS_DMG_ROOT "${NPP_MACOS_DIST_DIR}/dmg-root")
+set(NPP_MACOS_DMG_APP_BUNDLE "${NPP_MACOS_DMG_ROOT}/${PAPERWASP_APP_NAME}.app")
+set(NPP_MACOS_UNSIGNED_DMG "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}-unsigned.dmg")
+set(NPP_MACOS_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PAPERWASP_APP_NAME}-Info.plist")
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/PaperWaspInfo.plist.in"
+    "${NPP_MACOS_INFO_PLIST}"
+    @ONLY
+)
+
+set(NPP_MACOS_APP_PLUGINS "${NPP_MACOS_APP_CONTENTS}/PlugIns")
+
+add_custom_target(PaperWasp_package
+    DEPENDS PaperWasp ComparePlus MarkdownViewerPlusPlus
+    COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_APP_BUNDLE}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_MACOS}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_RESOURCES}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/ComparePlus"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/MarkdownViewerPlusPlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:PaperWasp>"
+        "${NPP_MACOS_APP_MACOS}/${PAPERWASP_APP_NAME}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:ComparePlus>"
+        "${NPP_MACOS_APP_PLUGINS}/ComparePlus/ComparePlus.dylib"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:MarkdownViewerPlusPlus>"
+        "${NPP_MACOS_APP_PLUGINS}/MarkdownViewerPlusPlus/MarkdownViewerPlusPlus.dylib"
+    COMMAND ditto --norsrc
+        "${NPP_ROOT}/logo.png"
+        "${NPP_MACOS_APP_MACOS}/logo.png"
+    COMMAND ditto --norsrc
+        "${NPP_ROOT}/about.png"
+        "${NPP_MACOS_APP_MACOS}/about.png"
+    COMMAND ditto --norsrc
+        "${NPP_ROOT}/logo.png"
+        "${NPP_MACOS_APP_RESOURCES}/logo.png"
+    COMMAND ditto --norsrc
+        "${NPP_ROOT}/about.png"
+        "${NPP_MACOS_APP_RESOURCES}/about.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_BINARY_DIR}/AppIcon.icns"
+        "${NPP_MACOS_APP_RESOURCES}/AppIcon.icns"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${NPP_MACOS_INFO_PLIST}"
+        "${NPP_MACOS_APP_CONTENTS}/Info.plist"
+    COMMENT "Packaging ${PAPERWASP_APP_NAME}.app"
+)
+
+if(CODESIGN_ENABLED)
+    # Sign and build DMG in a temp directory to avoid iCloud/FileProvider xattr
+    # interference. iCloud-synced directories re-add xattrs that invalidate code
+    # signatures, so all signing and DMG creation happens outside the sync zone.
+    # NOTE: --deep is acceptable while the bundle has no nested frameworks/helpers.
+    # Replace with explicit per-component signing if nested bundles are added.
+    if(DEFINED ENV{TMPDIR} AND NOT "$ENV{TMPDIR}" STREQUAL "")
+        set(NPP_SIGN_STAGE_ROOT "$ENV{TMPDIR}")
+    else()
+        set(NPP_SIGN_STAGE_ROOT "/tmp")
+    endif()
+    set(NPP_SIGN_STAGE "${NPP_SIGN_STAGE_ROOT}/PaperWasp-sign-stage")
+    set(NPP_SIGN_STAGE_APP "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.app")
+    set(NPP_SIGN_STAGE_DMG_ROOT "${NPP_SIGN_STAGE}/dmg-root")
+
+    add_custom_target(PaperWasp_sign
+        DEPENDS PaperWasp_package
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_SIGN_STAGE}"
+        COMMAND ditto --norsrc
+            "${NPP_MACOS_APP_BUNDLE}"
+            "${NPP_SIGN_STAGE_APP}"
+        COMMAND xattr -cr "${NPP_SIGN_STAGE_APP}"
+        COMMAND codesign --force --options runtime
+            --sign "${CODESIGN_IDENTITY}"
+            --entitlements "${CODESIGN_ENTITLEMENTS}"
+            --timestamp
+            --deep
+            "${NPP_SIGN_STAGE_APP}"
+        COMMAND codesign --verify --deep --strict --verbose=2
+            "${NPP_SIGN_STAGE_APP}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_APP_BUNDLE}"
+        COMMAND ditto "${NPP_SIGN_STAGE_APP}" "${NPP_MACOS_APP_BUNDLE}"
+        COMMAND ${CMAKE_COMMAND} -E echo
+            "Signed app bundle: ${NPP_MACOS_APP_BUNDLE}"
+        COMMENT "Code signing ${PAPERWASP_APP_NAME}.app with '${CODESIGN_IDENTITY}'"
+    )
+
+    add_custom_target(PaperWasp_dmg
+        DEPENDS PaperWasp_sign
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_SIGN_STAGE_DMG_ROOT}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE_DMG_ROOT}/${PAPERWASP_APP_NAME}.app"
+        COMMAND ditto "${NPP_SIGN_STAGE_APP}" "${NPP_SIGN_STAGE_DMG_ROOT}/${PAPERWASP_APP_NAME}.app"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE_DMG_ROOT}/Applications"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "/Applications"
+            "${NPP_SIGN_STAGE_DMG_ROOT}/Applications"
+        COMMAND ${CMAKE_COMMAND} -E rm -f "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND hdiutil create
+            -volname "${PAPERWASP_APP_NAME}"
+            -srcfolder "${NPP_SIGN_STAGE_DMG_ROOT}"
+            -format UDZO
+            -ov
+            "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND codesign --force --sign "${CODESIGN_IDENTITY}"
+            --timestamp "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND codesign --verify --verbose=2 "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${NPP_SIGN_STAGE}/${PAPERWASP_APP_NAME}.dmg"
+            "${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND ${CMAKE_COMMAND} -E echo
+            "Signed DMG: ${NPP_MACOS_DIST_DIR}/${PAPERWASP_APP_NAME}.dmg"
+        COMMAND ${CMAKE_COMMAND} -E echo
+            "NOTE: If your project directory is iCloud-synced, signature verification"
+        COMMAND ${CMAKE_COMMAND} -E echo
+            "may fail locally due to Finder xattrs. The DMG is valid for distribution."
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_SIGN_STAGE}"
+        COMMENT "Building and signing ${PAPERWASP_APP_NAME}.dmg"
+    )
+else()
+    add_custom_target(PaperWasp_sign
+        DEPENDS PaperWasp_package
+        COMMENT "Code signing SKIPPED (CODESIGN_ENABLED=OFF)"
+    )
+
+    add_custom_target(PaperWasp_dmg
+        DEPENDS PaperWasp_sign
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_DMG_ROOT}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_DMG_APP_BUNDLE}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${NPP_MACOS_APP_BUNDLE}"
+            "${NPP_MACOS_DMG_APP_BUNDLE}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_DMG_ROOT}/Applications"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "/Applications"
+            "${NPP_MACOS_DMG_ROOT}/Applications"
+        COMMAND ${CMAKE_COMMAND} -E rm -f "${NPP_MACOS_UNSIGNED_DMG}"
+        COMMAND hdiutil create
+            -volname "${PAPERWASP_APP_NAME}"
+            -srcfolder "${NPP_MACOS_DMG_ROOT}"
+            -format UDZO
+            -ov
+            "${NPP_MACOS_UNSIGNED_DMG}"
+        COMMENT "Building ${PAPERWASP_APP_NAME}-unsigned.dmg"
+    )
+endif()
+
+message(STATUS "=== PaperWasp macOS Port ===")
+message(STATUS "Compatibility compile target: npp_macos_compile_test")
+message(STATUS "App target: PaperWasp")
+message(STATUS "Packaging target: PaperWasp_package")
+message(STATUS "Signing target: PaperWasp_sign")
+message(STATUS "DMG target: PaperWasp_dmg")
 message(STATUS "Shim headers: ${SHIM_INCLUDE_DIR}")
 message(STATUS "Scintilla: ${SCINTILLA_DIR}")
 message(STATUS "Lexilla: ${LEXILLA_DIR}")

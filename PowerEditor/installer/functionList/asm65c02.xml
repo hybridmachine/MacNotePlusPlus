@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- ==========================================================================\
+|
+|   Function-list parser for Assembly (65C02).
+|   Matches any label terminated by ':' (with optional leading whitespace)
+|   as a "subroutine". Heuristic only — 65C02 has no formal function
+|   construct; refine later.
+|
+|   See: https://npp-user-manual.org/docs/function-list/
+|
+\=========================================================================== -->
+<NotepadPlus>
+	<functionList>
+		<!-- =============================================== [ Assembly (65C02) ] -->
+
+		<parser
+			displayName="Assembly (65C02)"
+			id         ="asm65c02_subroutine"
+			commentExpr="(?x)                                               # inline-comments mode
+							(?m-s:;.*$)                                     # ;-to-EOL line comment
+						"
+		>
+			<function
+				mainExpr="(?x)                                              # inline-comments mode
+						(?m)^\h*                                            # optional leading whitespace
+						\K                                                  # keep the text matched so far, out of the overall match
+						[A-Za-z_][\w]*                                      # valid label characters (no $ since WDC uses $ as hex prefix)
+						(?=:)                                               # up till the colon
+					"
+			/>
+		</parser>
+	</functionList>
+</NotepadPlus>
