@@ -389,6 +389,7 @@ add_executable(PaperWasp
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/hash_tools.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/macro_manager.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_manager.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_docking.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/nppm_handler.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/compare_plus_visibility.mm"
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/plugin_invariants.mm"
@@ -401,6 +402,7 @@ target_include_directories(PaperWasp PRIVATE
     "${LEXILLA_INCLUDE_DIR}"
     "${UCHARDET_DIR}"
     "${NPP_SRC_DIR}/MISC/PluginsManager"
+    "${NPP_SRC_DIR}/WinControls/DockingWnd"
 )
 target_link_libraries(PaperWasp
     win32shim
@@ -537,6 +539,50 @@ add_custom_target(install_compare_plus
 )
 
 # ============================================================
+# Plugin: MarkdownViewerPlusPlus (macOS native port)
+# ============================================================
+set(MARKDOWN_VIEWER_PLUS_PLUS_DIR "${NPP_ROOT}/plugins/markdownViewerPlusPlus")
+
+add_library(MarkdownViewerPlusPlus MODULE
+    "${MARKDOWN_VIEWER_PLUS_PLUS_DIR}/src/macOS/MarkdownViewerPlusPlus.mm"
+)
+target_include_directories(MarkdownViewerPlusPlus PRIVATE
+    "${SHIM_INCLUDE_DIR}"
+    "${NPP_SRC_DIR}/MISC/PluginsManager"
+    "${NPP_SRC_DIR}/WinControls/DockingWnd"
+    "${SCINTILLA_INCLUDE_DIR}"
+)
+target_compile_definitions(MarkdownViewerPlusPlus PRIVATE
+    UNICODE
+    _UNICODE
+)
+set_target_properties(MarkdownViewerPlusPlus PROPERTIES
+    PREFIX ""
+    SUFFIX ".dylib"
+    OUTPUT_NAME "MarkdownViewerPlusPlus"
+)
+target_compile_options(MarkdownViewerPlusPlus PRIVATE
+    -fobjc-arc
+    -Wno-deprecated-declarations
+)
+target_link_options(MarkdownViewerPlusPlus PRIVATE -undefined dynamic_lookup)
+target_link_libraries(MarkdownViewerPlusPlus PRIVATE
+    "-framework AppKit"
+    "-framework Foundation"
+    "-framework WebKit"
+)
+
+add_custom_target(install_markdown_viewer_plus_plus
+    DEPENDS MarkdownViewerPlusPlus
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/MarkdownViewerPlusPlus"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:MarkdownViewerPlusPlus>"
+        "$ENV{HOME}/Library/Application Support/PaperWasp/plugins/MarkdownViewerPlusPlus/MarkdownViewerPlusPlus.dylib"
+    COMMENT "Installing MarkdownViewerPlusPlus plugin to ~/Library/Application Support/PaperWasp/plugins/"
+)
+
+# ============================================================
 # Packaging: App bundle, code signing, and DMG
 # ============================================================
 set(NPP_MACOS_DIST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dist")
@@ -558,17 +604,21 @@ configure_file(
 set(NPP_MACOS_APP_PLUGINS "${NPP_MACOS_APP_CONTENTS}/PlugIns")
 
 add_custom_target(PaperWasp_package
-    DEPENDS PaperWasp ComparePlus
+    DEPENDS PaperWasp ComparePlus MarkdownViewerPlusPlus
     COMMAND ${CMAKE_COMMAND} -E rm -rf "${NPP_MACOS_APP_BUNDLE}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_MACOS}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_RESOURCES}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/ComparePlus"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${NPP_MACOS_APP_PLUGINS}/MarkdownViewerPlusPlus"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:PaperWasp>"
         "${NPP_MACOS_APP_MACOS}/${PAPERWASP_APP_NAME}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:ComparePlus>"
         "${NPP_MACOS_APP_PLUGINS}/ComparePlus/ComparePlus.dylib"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:MarkdownViewerPlusPlus>"
+        "${NPP_MACOS_APP_PLUGINS}/MarkdownViewerPlusPlus/MarkdownViewerPlusPlus.dylib"
     COMMAND ditto --norsrc
         "${NPP_ROOT}/logo.png"
         "${NPP_MACOS_APP_MACOS}/logo.png"
