@@ -188,11 +188,132 @@ static std::string renderInlineMarkdown(const std::string& value)
 	return rendered;
 }
 
+enum class TableAlign { None, Left, Right, Center };
+
+static std::vector<std::string> splitTableCells(const std::string& s)
+{
+	std::string body = s;
+	if (!body.empty() && body.front() == '|') body.erase(body.begin());
+	if (!body.empty() && body.back() == '|') body.pop_back();
+
+	std::vector<std::string> cells;
+	std::string current;
+	for (size_t i = 0; i < body.size(); ++i)
+	{
+		char c = body[i];
+		if (c == '\\' && i + 1 < body.size() && body[i + 1] == '|')
+		{
+			current += '|';
+			++i;
+		}
+		else if (c == '|')
+		{
+			cells.push_back(trim(current));
+			current.clear();
+		}
+		else
+		{
+			current += c;
+		}
+	}
+	cells.push_back(trim(current));
+	return cells;
+}
+
+static bool parseTableDelimiter(const std::string& line, std::vector<TableAlign>& out)
+{
+	std::string t = trim(line);
+	if (t.find('|') == std::string::npos) return false;
+	auto cells = splitTableCells(t);
+	if (cells.empty()) return false;
+	out.clear();
+	for (const auto& cell : cells)
+	{
+		if (cell.empty()) return false;
+		bool leftColon = cell.front() == ':';
+		bool rightColon = cell.back() == ':';
+		size_t startIdx = leftColon ? 1 : 0;
+		size_t endIdx = rightColon ? cell.size() - 1 : cell.size();
+		if (startIdx >= endIdx) return false;
+		for (size_t i = startIdx; i < endIdx; ++i)
+			if (cell[i] != '-') return false;
+		if (leftColon && rightColon) out.push_back(TableAlign::Center);
+		else if (rightColon) out.push_back(TableAlign::Right);
+		else if (leftColon) out.push_back(TableAlign::Left);
+		else out.push_back(TableAlign::None);
+	}
+	return true;
+}
+
+static bool looksLikeTableRow(const std::string& s)
+{
+	return !s.empty() && s.find('|') != std::string::npos;
+}
+
+static const char* alignStyle(TableAlign a)
+{
+	switch (a)
+	{
+		case TableAlign::Left:   return " style=\"text-align:left\"";
+		case TableAlign::Right:  return " style=\"text-align:right\"";
+		case TableAlign::Center: return " style=\"text-align:center\"";
+		default: return "";
+	}
+}
+
+// Emits a GFM table starting at headerIdx (header row) with the parsed delimiter
+// at headerIdx+1; returns the index of the last consumed line so the outer loop
+// can ++i past it.
+// Known v1 limitation: pipes inside backtick code spans inside a cell are split as
+// real cell separators (cells are split before inline markdown runs).
+static size_t emitTable(std::ostringstream& html,
+                        const std::vector<std::string>& lines,
+                        size_t headerIdx,
+                        const std::vector<TableAlign>& aligns)
+{
+	auto headerCells = splitTableCells(trim(lines[headerIdx]));
+	while (headerCells.size() < aligns.size()) headerCells.push_back("");
+	if (headerCells.size() > aligns.size()) headerCells.resize(aligns.size());
+
+	html << "<table>\n<thead>\n<tr>";
+	for (size_t c = 0; c < headerCells.size(); ++c)
+		html << "<th" << alignStyle(aligns[c]) << ">"
+		     << renderInlineMarkdown(headerCells[c]) << "</th>";
+	html << "</tr>\n</thead>\n<tbody>\n";
+
+	size_t i = headerIdx + 2;
+	for (; i < lines.size(); ++i)
+	{
+		std::string stripped = trim(lines[i]);
+		if (stripped.empty() || !looksLikeTableRow(stripped)) break;
+		auto cells = splitTableCells(stripped);
+		while (cells.size() < aligns.size()) cells.push_back("");
+		if (cells.size() > aligns.size()) cells.resize(aligns.size());
+		html << "<tr>";
+		for (size_t c = 0; c < cells.size(); ++c)
+			html << "<td" << alignStyle(aligns[c]) << ">"
+			     << renderInlineMarkdown(cells[c]) << "</td>";
+		html << "</tr>\n";
+	}
+	html << "</tbody>\n</table>\n";
+	return i - 1;
+}
+
 static std::string markdownToHtml(const std::string& markdown)
 {
-	std::istringstream input(markdown);
+	std::vector<std::string> lines;
+	{
+		std::istringstream input(markdown);
+		std::string raw;
+		while (std::getline(input, raw))
+		{
+			if (!raw.empty() && raw.back() == '\r')
+				raw.pop_back();
+			lines.push_back(std::move(raw));
+		}
+	}
+
 	std::ostringstream html;
-	std::string line;
 	std::string paragraph;
 	bool inList = false;
 	bool inCode = false;
@@ -212,10 +333,9 @@ static std::string markdownToHtml(const std::string& markdown)
 		}
 	};
 
-	while (std::getline(input, line))
+	for (size_t i = 0; i < lines.size(); ++i)
 	{
-		if (!line.empty() && line.back() == '\r')
-			line.pop_back();
+		const std::string& line = lines[i];
 		std::string stripped = trim(line);
 
 		if (stripped.rfind("```", 0) == 0)
@@ -241,6 +361,23 @@ static std::string markdownToHtml(const std::string& markdown)
 			flushParagraph();
 			closeList();
 			continue;
+		}
+
+		// GFM table: header row followed by a valid delimiter row.
+		if (looksLikeTableRow(stripped) && i + 1 < lines.size())
+		{
+			std::vector<TableAlign> aligns;
+			if (parseTableDelimiter(lines[i + 1], aligns))
+			{
+				auto headerCells = splitTableCells(stripped);
+				if (!headerCells.empty())
+				{
+					flushParagraph();
+					closeList();
+					i = emitTable(html, lines, i, aligns);
+					continue;
+				}
+			}
 		}
 
 		size_t headingLevel = 0;
@@ -313,11 +450,29 @@ blockquote {
 	margin-left: 0;
 	padding-left: 12px;
 }
+table {
+	border-collapse: collapse;
+	margin: 0.6em 0;
+	width: auto;
+}
+th, td {
+	border: 1px solid #d0d7de;
+	padding: 6px 10px;
+	vertical-align: top;
+}
+thead th {
+	background: #f6f8fa;
+	font-weight: 600;
+}
+tbody tr:nth-child(even) { background: #fafbfc; }
 @media (prefers-color-scheme: dark) {
 	body { color: #d4d4d4; background: #1e1e1e; }
 	pre, code { background: #2d2d2d; }
 	a { color: #6cb6ff; }
 	blockquote { border-left-color: #555; color: #aaa; }
+	th, td { border-color: #555; }
+	thead th { background: #2d2d2d; }
+	tbody tr:nth-child(even) { background: #252525; }
 }
 )CSS";
 }
