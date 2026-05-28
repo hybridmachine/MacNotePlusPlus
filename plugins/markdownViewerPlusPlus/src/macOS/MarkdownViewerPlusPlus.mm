@@ -271,9 +271,8 @@ static size_t emitTable(std::ostringstream& html,
                         size_t headerIdx,
                         const std::vector<TableAlign>& aligns)
 {
+	// Caller guarantees the header row has the same cell count as `aligns`.
 	auto headerCells = splitTableCells(trim(lines[headerIdx]));
-	while (headerCells.size() < aligns.size()) headerCells.push_back("");
-	if (headerCells.size() > aligns.size()) headerCells.resize(aligns.size());
 
 	html << "<table>\n<thead>\n<tr>";
 	for (size_t c = 0; c < headerCells.size(); ++c)
@@ -363,14 +362,16 @@ static std::string markdownToHtml(const std::string& markdown)
 			continue;
 		}
 
-		// GFM table: header row followed by a valid delimiter row.
+		// GFM table: header row followed by a valid delimiter row. Per GFM,
+		// the header must have the same cell count as the delimiter — otherwise
+		// the block is not a table and falls through to paragraph/list parsing.
 		if (looksLikeTableRow(stripped) && i + 1 < lines.size())
 		{
 			std::vector<TableAlign> aligns;
 			if (parseTableDelimiter(lines[i + 1], aligns))
 			{
 				auto headerCells = splitTableCells(stripped);
-				if (!headerCells.empty())
+				if (headerCells.size() == aligns.size())
 				{
 					flushParagraph();
 					closeList();
