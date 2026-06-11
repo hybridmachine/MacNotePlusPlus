@@ -90,6 +90,7 @@ target_compile_definitions(Scintilla PRIVATE
 target_compile_options(Scintilla PRIVATE
     -Wno-deprecated-declarations
     -Wno-unused-parameter
+    -Wno-deprecated-this-capture
     -fobjc-arc
 )
 target_link_libraries(Scintilla PUBLIC
@@ -521,7 +522,7 @@ set_target_properties(ComparePlus PROPERTIES
     SUFFIX ".dylib"
     OUTPUT_NAME "ComparePlus"
 )
-target_compile_options(ComparePlus PRIVATE -Wno-deprecated-declarations)
+target_compile_options(ComparePlus PRIVATE -Wno-deprecated-declarations "-Wno-#pragma-messages")
 target_link_options(ComparePlus PRIVATE -undefined dynamic_lookup)
 target_link_libraries(ComparePlus PRIVATE
     "-framework AppKit"

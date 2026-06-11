@@ -453,8 +453,8 @@ enum {
 #define SC_MULTIPASTE_EACH  1
 
 // Scintilla search flags
-#define SCFIND_MATCHCASE  4
-#define SCFIND_WHOLEWORD  2
+#define SCFIND_MATCHCASE  0x4
+#define SCFIND_WHOLEWORD  0x2
 #define SCFIND_REGEXP     0x00200000
 #define SCFIND_POSIX      0x00400000
 #define SCFIND_CXX11REGEX 0x00800000
@@ -508,7 +508,7 @@ enum {
 #define SC_FOLDACTION_EXPAND      1
 #define SC_FOLDACTION_TOGGLE      2
 #define SC_FOLDLEVELHEADERFLAG    0x2000
-#define SC_AUTOMATICFOLD_CLICK    0x0004
+#define SC_AUTOMATICFOLD_CLICK    0x0002
 
 // Change history constants
 #define SC_CHANGE_HISTORY_DISABLED  0
