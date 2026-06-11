@@ -200,7 +200,9 @@ static void parseBraceLanguage(const std::string& utf8Text, int languageIndex, P
 	// bare "name(...) {" is rejected so calls/control statements don't match.
 	// Modifiers and type are matched token-wise (no bare \s alternation):
 	// whitespace-splitting ambiguity in std::regex costs minutes on large files.
-	static const std::regex javaCsClassRe(R"(\b(class|struct|interface|enum|record)\s+([A-Za-z_]\w*))");
+	// "record class X" / "record struct X" (C# 10) must be matched as a unit,
+	// or the second keyword would be captured as the container name.
+	static const std::regex javaCsClassRe(R"(\b(record\s+(?:class|struct)|class|struct|interface|enum|record)\s+([A-Za-z_]\w*))");
 #define JAVACS_TYPE R"([\w<][\w<>\[\],.?]*(?:\s+[\w<>\[\],.?]+)*\s+)"
 #define JAVA_PREFIX R"(^\s*(?:@\w+(?:\([^()]*\))?\s*)*(?:(?:(?:public|protected|private|static|final|synchronized|abstract|default|native|strictfp)\s+)+(?:)" JAVACS_TYPE R"()?|)" JAVACS_TYPE R"())"
 #define CS_PREFIX R"(^\s*(?:(?:(?:public|protected|private|internal|static|virtual|override|sealed|abstract|async|extern|unsafe|new|partial)\s+)+(?:)" JAVACS_TYPE R"()?|)" JAVACS_TYPE R"())"
