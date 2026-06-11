@@ -52,6 +52,7 @@ constexpr int LANG_SCALA = 32;
 constexpr int LANG_LATEX = 33;
 constexpr int LANG_ASM_65C02 = 34;
 constexpr int LANG_ASM_X86 = 35;
+constexpr int LANG_CSHARP = 36;
 
 extern const LangDef g_languages[];
 extern const int g_numLanguages;
