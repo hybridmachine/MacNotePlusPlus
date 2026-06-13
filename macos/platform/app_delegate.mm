@@ -117,6 +117,11 @@ static void setDockIconFromLogo()
 
 @implementation NppAppDelegate
 
+- (void)dealloc
+{
+	[[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification*)notification
 {
 	SettingsManager::instance().load();
@@ -763,6 +768,15 @@ static void setDockIconFromLogo()
 		autoCloseOnViewDestroyed(ctx().scintillaView);
 		ScintillaBridge_destroyView(ctx().scintillaView);
 		ctx().scintillaView = nullptr;
+	}
+
+	// Release the second ScintillaView (balances __bridge_retained in createView)
+	if (ctx().scintillaView2)
+	{
+		ScintillaBridge_clearNotifyCallback(ctx().scintillaView2);
+		autoCloseOnViewDestroyed(ctx().scintillaView2);
+		ScintillaBridge_destroyView(ctx().scintillaView2);
+		ctx().scintillaView2 = nullptr;
 	}
 
 	destroyDocumentMap();
