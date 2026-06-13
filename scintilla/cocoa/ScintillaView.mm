@@ -1506,18 +1506,18 @@ static NSCursor *cursorFromEnum(Window::Cursor cursor) {
 		[center addObserver: self
 			   selector: @selector(windowWillMove:)
 			       name: NSWindowWillMoveNotification
-			     object: self.window];
+			     object: nil];
 
 		[center addObserver: self
 			   selector: @selector(defaultsDidChange:)
 			       name: NSSystemColorsDidChangeNotification
-			     object: self.window];
+			     object: nil];
 
 		[scrollView.contentView setPostsBoundsChangedNotifications: YES];
 		[center addObserver: self
 			   selector: @selector(scrollerAction:)
 			       name: NSViewBoundsDidChangeNotification
-			     object: scrollView.contentView];
+			     object: nil];
 
 		mBackend->UpdateBaseElements();
 	}

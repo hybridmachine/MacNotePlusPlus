@@ -331,6 +331,23 @@ const LangDef g_languages[] = {
 		 // set 7, FOLD CLOSE (type6)
 		 "endm endp ends endif %endmacro %endif",
 	 }},
+	// Append new languages at the end only: sessions persist languageIndex as a raw int.
+	{"C#", "cpp",
+	 "abstract as base bool break byte case catch char checked class const continue decimal "
+	 "default delegate do double else enum event explicit extern false finally fixed float for "
+	 "foreach goto if implicit in int interface internal is lock long namespace new null object "
+	 "operator out override params private protected public readonly record ref return sbyte "
+	 "sealed short sizeof stackalloc static string struct switch this throw true try typeof "
+	 "uint ulong unchecked unsafe ushort using var virtual void volatile while "
+	 "add alias ascending async await by descending dynamic equals from get global group init "
+	 "into join let nameof on orderby partial remove required select set value when where yield",
+	 "Console Math String Object Boolean Byte Char Decimal Double Single Int16 Int32 Int64 "
+	 "SByte UInt16 UInt32 UInt64 DateTime DateTimeOffset TimeSpan Guid Exception "
+	 "ArgumentException InvalidOperationException NotImplementedException List Dictionary "
+	 "HashSet Queue Stack KeyValuePair IEnumerable IEnumerator IList IDictionary ICollection "
+	 "IDisposable Task ValueTask CancellationToken Action Func Predicate EventArgs EventHandler "
+	 "StringBuilder Nullable Tuple ValueTuple Lazy Span ReadOnlySpan Memory",
+	 IDM_LANG_BASE + LANG_CSHARP},
 };
 const int g_numLanguages = sizeof(g_languages) / sizeof(g_languages[0]);
 
@@ -359,6 +376,8 @@ int guessLanguage(const std::wstring& filePath)
 		return LANG_CPP;
 	if ([ext isEqualToString:@"java"])
 		return LANG_JAVA;
+	if ([ext isEqualToString:@"cs"] || [ext isEqualToString:@"csx"])
+		return LANG_CSHARP;
 	if ([ext isEqualToString:@"py"] || [ext isEqualToString:@"pyw"])
 		return LANG_PYTHON;
 	if ([ext isEqualToString:@"js"] || [ext isEqualToString:@"jsx"])
@@ -453,6 +472,7 @@ bool isCStyleLanguage(int languageIndex)
 		case LANG_PHP:
 		case LANG_KOTLIN:
 		case LANG_SCALA:
+		case LANG_CSHARP:
 			return true;
 		default:
 			return false;

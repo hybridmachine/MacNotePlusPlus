@@ -49,7 +49,12 @@ constexpr double NPP_STATUS_BAR_HEIGHT = 22.0;
 #define IDM_VIEW_PREFERENCES         42050
 #define IDM_VIEW_FOLDALL             42060
 #define IDM_VIEW_UNFOLDALL           42061
-#define IDM_LANG_BASE                44000  // Base for language menu items
+// Base for language menu items. Must stay clear of upstream menuCmdID.h values
+// (whose highest is IDM_EDIT_FUNCCALLTIP_NEXT = 50011): plugins send those by
+// value, and the language range check in MainWndProc runs first, so a base of
+// 44000 shadowed upstream view commands such as IDM_VIEW_SYNSCROLLV/H
+// (44035/44036, sent by ComparePlus).
+#define IDM_LANG_BASE                51000
 
 // Phase 7 command IDs — Edit commands
 #define IDM_EDIT_UPPERCASE           42031
@@ -453,8 +458,8 @@ enum {
 #define SC_MULTIPASTE_EACH  1
 
 // Scintilla search flags
-#define SCFIND_MATCHCASE  4
-#define SCFIND_WHOLEWORD  2
+#define SCFIND_MATCHCASE  0x4
+#define SCFIND_WHOLEWORD  0x2
 #define SCFIND_REGEXP     0x00200000
 #define SCFIND_POSIX      0x00400000
 #define SCFIND_CXX11REGEX 0x00800000
@@ -508,7 +513,7 @@ enum {
 #define SC_FOLDACTION_EXPAND      1
 #define SC_FOLDACTION_TOGGLE      2
 #define SC_FOLDLEVELHEADERFLAG    0x2000
-#define SC_AUTOMATICFOLD_CLICK    0x0004
+#define SC_AUTOMATICFOLD_CLICK    0x0002
 
 // Change history constants
 #define SC_CHANGE_HISTORY_DISABLED  0

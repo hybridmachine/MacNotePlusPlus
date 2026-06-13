@@ -109,6 +109,17 @@ static bool isControlKeyword(const std::string& name)
 	return kKeywords.find(name) != kKeywords.end();
 }
 
+// Kept separate from isControlKeyword: "lock" or "using" are legitimate C++
+// function names, so they must only be filtered for Java/C#.
+static bool isJavaCsControlKeyword(const std::string& name)
+{
+	static const std::unordered_set<std::string> kKeywords{
+		"if", "for", "foreach", "while", "switch", "catch", "try", "using",
+		"lock", "synchronized", "return", "throw", "new", "else", "do"
+	};
+	return kKeywords.find(name) != kKeywords.end();
+}
+
 struct PendingFunc
 {
 	std::string name;
@@ -181,7 +192,28 @@ static void parseBraceLanguage(const std::string& utf8Text, int languageIndex, P
 
 	static const std::regex cppScopedFuncRe(R"(\b([A-Za-z_]\w*)::([A-Za-z_~]\w*)\s*\([^;{}]*\)\s*(?:const\s*)?\{)");
 	static const std::regex cppFuncRe(R"(^\s*[\w:<>\~\*&\s]+\s+([A-Za-z_~]\w*)\s*\([^;{}]*\)\s*(?:const\s*)?\{)");
-	static const std::regex javaFuncRe(R"(^\s*(?:public|protected|private|static|final|synchronized|abstract|native|strictfp|\s)+[\w\<\>\[\],\s]+\s+([A-Za-z_]\w*)\s*\([^;{}]*\)\s*\{)");
+
+	// Java/C# share one signature shape: optional annotations (Java), modifier
+	// keywords, a return type, then name(params). C# puts generic params after
+	// the name and allows ": base(...)" / "where T : ..." after the params.
+	// The prefix requires modifiers (constructors) or a type (plain methods) —
+	// bare "name(...) {" is rejected so calls/control statements don't match.
+	// Modifiers and type are matched token-wise (no bare \s alternation):
+	// whitespace-splitting ambiguity in std::regex costs minutes on large files.
+	// "record class X" / "record struct X" (C# 10) must be matched as a unit,
+	// or the second keyword would be captured as the container name.
+	static const std::regex javaCsClassRe(R"(\b(record\s+(?:class|struct)|class|struct|interface|enum|record)\s+([A-Za-z_]\w*))");
+#define JAVACS_TYPE R"([\w<][\w<>\[\],.?]*(?:\s+[\w<>\[\],.?]+)*\s+)"
+#define JAVA_PREFIX R"(^\s*(?:@\w+(?:\([^()]*\))?\s*)*(?:(?:(?:public|protected|private|static|final|synchronized|abstract|default|native|strictfp)\s+)+(?:)" JAVACS_TYPE R"()?|)" JAVACS_TYPE R"())"
+#define CS_PREFIX R"(^\s*(?:(?:(?:public|protected|private|internal|static|virtual|override|sealed|abstract|async|extern|unsafe|new|partial)\s+)+(?:)" JAVACS_TYPE R"()?|)" JAVACS_TYPE R"())"
+	static const std::regex javaFuncRe(JAVA_PREFIX R"(([A-Za-z_$]\w*)\s*\([^;{}]*\)\s*(?:throws\s+[\w$.,\s]+)?\{)");
+	static const std::regex javaSigRe(JAVA_PREFIX R"(([A-Za-z_$]\w*)\s*\([^;{}]*\)\s*(?:throws\s+[\w$.,\s]+)?$)");
+	static const std::regex csFuncRe(CS_PREFIX R"(([A-Za-z_]\w*)\s*(?:<[^<>()]*>)?\s*\([^;{}]*\)\s*(?::\s*(?:base|this)\s*\([^()]*\)\s*)?\{)");
+	static const std::regex csSigRe(CS_PREFIX R"(([A-Za-z_]\w*)\s*(?:<[^<>()]*>)?\s*\([^;{}]*\)\s*(?::\s*(?:base|this)\s*\([^()]*\)\s*)?(?:where\s+[\w\s:,.<>()]+)?$)");
+	static const std::regex csExprRe(CS_PREFIX R"(([A-Za-z_]\w*)\s*(?:<[^<>()]*>)?\s*\([^;{}]*\)\s*=>)");
+#undef CS_PREFIX
+#undef JAVA_PREFIX
+#undef JAVACS_TYPE
 	static const std::regex jsFunctionRe(R"(^\s*function\s+([A-Za-z_$]\w*)\s*\()");
 	static const std::regex jsArrowRe(R"(^\s*(?:const|let|var)\s+([A-Za-z_$]\w*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)");
 	static const std::regex jsMethodRe(R"(^\s*(?:async\s+)?([A-Za-z_$]\w*)\s*\([^)]*\)\s*\{)");
@@ -274,6 +306,7 @@ static void parseBraceLanguage(const std::string& utf8Text, int languageIndex, P
 		}
 
 		std::smatch m;
+		bool matchedClassThisLine = false;
 		if (!isComment)
 		{
 		if (languageIndex == LANG_RUST)
@@ -302,6 +335,17 @@ static void parseBraceLanguage(const std::string& utf8Text, int languageIndex, P
 			{
 				pendingContainer = m[1].str();
 				accum.addContainer(pendingContainer, lineNo, static_cast<int>(lineStart + static_cast<size_t>(m.position(1))), "c-struct");
+			}
+		}
+		else if (languageIndex == LANG_JAVA || languageIndex == LANG_CSHARP)
+		{
+			if (std::regex_search(line, m, javaCsClassRe))
+			{
+				pendingContainer = m[2].str();
+				accum.addContainer(pendingContainer, lineNo, static_cast<int>(lineStart + static_cast<size_t>(m.position(2))), "java-cs-class");
+				// Suppress function matching on this line: a record header like
+				// "record Point(int x, int y)" would otherwise also match as a function.
+				matchedClassThisLine = true;
 			}
 		}
 		else
@@ -366,10 +410,55 @@ static void parseBraceLanguage(const std::string& utf8Text, int languageIndex, P
 				}
 			}
 		}
-		else if (languageIndex == LANG_JAVA)
+		else if (languageIndex == LANG_JAVA || languageIndex == LANG_CSHARP)
 		{
-			if (std::regex_search(line, m, javaFuncRe))
-				accum.addSymbol(m[1].str(), topContainer, lineNo, static_cast<int>(lineStart + static_cast<size_t>(m.position(1))), "java-func");
+			const bool isJava = (languageIndex == LANG_JAVA);
+			const std::regex& funcRe = isJava ? javaFuncRe : csFuncRe;
+			const std::regex& sigRe = isJava ? javaSigRe : csSigRe;
+			// Cheap string gates: a signature needs parens, an inline body
+			// needs a brace. Skipping the regexes on plain statement lines is
+			// what keeps large files affordable.
+			const bool hasParen = clean.find('(') != std::string::npos;
+			const bool hasBrace = clean.find('{') != std::string::npos;
+			const bool hasArrow = clean.find("=>") != std::string::npos;
+			const bool isReturnOrThrow = clean.rfind("return ", 0) == 0 || clean.rfind("throw ", 0) == 0;
+			if (matchedClassThisLine || !hasParen || isReturnOrThrow)
+			{
+				// container declaration or no possible signature on this line
+			}
+			else if (hasBrace && std::regex_search(line, m, funcRe))
+			{
+				const std::string func = m[1].str();
+				if (!isJavaCsControlKeyword(func))
+				{
+					accum.addSymbol(func, topContainer, lineNo, static_cast<int>(lineStart + static_cast<size_t>(m.position(1))), isJava ? "java-func" : "cs-func");
+					++matchCount;
+				}
+			}
+			else if (!isJava && hasArrow && std::regex_search(line, m, csExprRe))
+			{
+				const std::string func = m[1].str();
+				if (!isJavaCsControlKeyword(func))
+				{
+					accum.addSymbol(func, topContainer, lineNo, static_cast<int>(lineStart + static_cast<size_t>(m.position(1))), "cs-expr");
+					++matchCount;
+				}
+			}
+			else if (!hasBrace && !endsWithSemicolon(clean) && std::regex_search(line, m, sigRe))
+			{
+				// Allman style: signature on this line, { on the next
+				const std::string func = m[1].str();
+				if (!isJavaCsControlKeyword(func))
+				{
+					hasPendingFunc = true;
+					pendingFunc.name = func;
+					pendingFunc.isScoped = false;
+					pendingFunc.line = lineNo;
+					pendingFunc.namePosition = static_cast<int>(lineStart + static_cast<size_t>(m.position(1)));
+					++pendingSetCount;
+					FLLOG("  PENDING [%s-allman] %s line=%d", isJava ? "java" : "cs", func.c_str(), lineNo);
+				}
+			}
 		}
 		else if (languageIndex == LANG_JAVASCRIPT || languageIndex == LANG_TYPESCRIPT)
 		{
@@ -565,7 +654,8 @@ std::vector<FunctionListNode> parseFunctionListNodes(int languageIndex, const st
 		|| languageIndex == LANG_JAVASCRIPT || languageIndex == LANG_TYPESCRIPT
 		|| languageIndex == LANG_GO || languageIndex == LANG_RUST
 		|| languageIndex == LANG_SWIFT || languageIndex == LANG_PHP
-		|| languageIndex == LANG_KOTLIN || languageIndex == LANG_SCALA)
+		|| languageIndex == LANG_KOTLIN || languageIndex == LANG_SCALA
+		|| languageIndex == LANG_CSHARP)
 	{
 		parseBraceLanguage(utf8Text, languageIndex, accum);
 	}

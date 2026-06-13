@@ -7,9 +7,11 @@
 #define GET_X_LPARAM(lp) ((int)(short)LOWORD(lp))
 #define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
 
+#ifndef GET_WM_COMMAND_ID
 #define GET_WM_COMMAND_ID(wp, lp)   LOWORD(wp)
 #define GET_WM_COMMAND_HWND(wp, lp) ((HWND)(lp))
 #define GET_WM_COMMAND_CMD(wp, lp)  HIWORD(wp)
+#endif
 
 // Button macros
 #define Button_GetCheck(hwnd) ((int)(DWORD)SendMessage((hwnd), BM_GETCHECK, 0, 0))
