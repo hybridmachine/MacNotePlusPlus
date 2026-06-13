@@ -235,6 +235,7 @@ static bool parseTableDelimiter(const std::string& line, std::vector<TableAlign>
 		size_t startIdx = leftColon ? 1 : 0;
 		size_t endIdx = rightColon ? cell.size() - 1 : cell.size();
 		if (startIdx >= endIdx) return false;
+		if (endIdx - startIdx < 3) return false;  // GFM requires >= 3 dashes per column
 		for (size_t i = startIdx; i < endIdx; ++i)
 			if (cell[i] != '-') return false;
 		if (leftColon && rightColon) out.push_back(TableAlign::Center);
