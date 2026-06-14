@@ -107,13 +107,14 @@ AppContext& ctx();  // Global accessor
 
 ```bash
 cd macos/build
-cmake -G Xcode ..          # Configure with Xcode generator
+cmake ..                   # Configure (default Unix Makefiles generator)
 cmake --build . --target PaperWasp          # Build app
 cmake --build . --target PaperWasp_package  # Build .app bundle
 cmake --build . --target PaperWasp_dmg      # Build unsigned DMG
 ```
 
-**Critical:** Use Xcode generator (`-G Xcode`). Makefiles fails on deeply nested object paths.
+The Xcode generator (`cmake -G Xcode ..`) also works; it places the dev binary at
+`macos/build/{Debug,Release}/PaperWasp` instead of `macos/build/PaperWasp` (pass `--config` when building).
 
 **Code signing (opt-in):**
 

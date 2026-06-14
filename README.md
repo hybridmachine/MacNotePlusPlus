@@ -19,16 +19,17 @@ dependency notices for details.
 
 ## Build PaperWasp
 
-The macOS port uses CMake with the Xcode generator:
+The macOS port uses CMake:
 
 ```bash
 cd macos/build
-cmake -G Xcode ..
-cmake --build . --target PaperWasp
-cmake --build . --target PaperWasp_package
-cmake --build . --target PaperWasp_dmg
+cmake ..
+cmake --build . --target PaperWasp            # dev binary at macos/build/PaperWasp
+cmake --build . --target PaperWasp_package    # .app bundle at macos/dist/PaperWasp.app
+cmake --build . --target PaperWasp_dmg        # unsigned DMG at macos/dist/PaperWasp-unsigned.dmg
 ```
 
-Build outputs are written under `macos/build/` and `macos/dist/`.
+The Xcode generator (`cmake -G Xcode ..`) also works; it places the dev binary at
+`macos/build/{Debug,Release}/PaperWasp` instead (pass `--config` when building).
 
 For legacy upstream Windows build information, see [BUILD.md](BUILD.md).

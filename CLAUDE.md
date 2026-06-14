@@ -10,25 +10,26 @@ Active development happens on the `macos-port` branch; PRs target `master`.
 
 ## Build Commands
 
-### macOS port (CMake + Xcode generator)
+### macOS port (CMake)
+
+The checked-in `macos/build/` directory is configured with the default Unix Makefiles generator and builds cleanly — don't wipe it just to switch generators. Binary location depends on the generator: `macos/build/PaperWasp` for Makefiles (single-config), `macos/build/{Debug,Release}/PaperWasp` for `-G Xcode` (pass `--config`). README/AGENTS.md still describe the Xcode generator; both work.
 
 ```bash
-# First-time setup (or full clean rebuild)
 cd macos/build
-rm -rf *
-cmake -G Xcode ..
 
-# Dev binary at macos/build/{Debug,Release}/PaperWasp
-cmake --build . --config Debug --target PaperWasp
+# Dev binary
+cmake --build . --target PaperWasp
 
-# .app bundle at macos/dist/PaperWasp.app (used for icon/Finder testing & release)
-cmake --build . --config Release --target PaperWasp_package
+# .app bundle at macos/dist/PaperWasp.app (icon/Finder testing & release;
+# bundles ComparePlus + MarkdownViewerPlusPlus into Contents/PlugIns)
+cmake --build . --target PaperWasp_package
 
 # Unsigned DMG at macos/dist/PaperWasp-unsigned.dmg
 cmake --build . --target PaperWasp_dmg
-```
 
-**Must use `-G Xcode`.** The default Makefiles generator fails on deeply nested object paths in this repo.
+# Full clean reconfigure (only if the build dir is broken)
+rm -rf * && cmake ..
+```
 
 ### Signing, notarization, and releases
 
@@ -93,7 +94,9 @@ Message dispatch is split across `NppBigSwitch.cpp` (window proc / `Notepad_plus
 
 ### Plugins
 
-Windows plugin contract in `PowerEditor/src/MISC/PluginsManager/PluginInterface.h` (exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`) using messages from `Notepad_plus_msgs.h`. macOS-side plugin scaffolding lives under `macos/plugin-sdk/` (early WIP).
+macOS keeps the Windows plugin contract from `PowerEditor/src/MISC/PluginsManager/PluginInterface.h` (exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`) using messages from `Notepad_plus_msgs.h`. Plugins build as CMake `MODULE` targets producing `.dylib`s linked with `-undefined dynamic_lookup`, so they resolve shim/Scintilla symbols from the host app at load time.
+
+Two ported plugins live at the repo root under `plugins/` (`comparePlus`, `markdownViewerPlusPlus`); `PaperWasp_package` bundles their dylibs into `PaperWasp.app/Contents/PlugIns`. When running the dev binary instead of the bundle, use the `install_compare_plus`, `install_markdown_viewer_plus_plus`, or `install_sample_plugin` targets, which copy each dylib to `~/Library/Application Support/PaperWasp/plugins/<Name>/<Name>.dylib` — the user-plugin load path. A minimal example plugin lives at `macos/plugin-sdk/example/HelloPaperWasp/`.
 
 ## Coding Style
 
