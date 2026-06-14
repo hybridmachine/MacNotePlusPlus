@@ -241,6 +241,7 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 		ScintillaBridge_sendMessage(sci, SCI_SETDOCPOINTER, 0, newDocPtr);
 		ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)content.c_str());
 		ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+		ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
 		doc.documentPtr = newDocPtr;
 		doc.savePointValid = true;
 	}

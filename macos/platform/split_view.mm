@@ -347,6 +347,7 @@ void doSplit()
 				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_SETTEXT, 0,
 					(intptr_t)cloneDoc.content.c_str());
 				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_SETSAVEPOINT, 0, 0);
+				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_EMPTYUNDOBUFFER, 0, 0);
 				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_GOTOPOS, 0, 0);
 				cloneDoc.documentPtr = docPtr;
 				cloneDoc.savePointValid = true;
