@@ -271,13 +271,15 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				case IDM_EDIT_UNDO:
 				{
 					void* sci = ctx().activeScintillaView();
-					if (sci) ScintillaBridge_sendMessage(sci, SCI_UNDO, 0, 0);
+					if (sci && ScintillaBridge_sendMessage(sci, SCI_CANUNDO, 0, 0))
+						ScintillaBridge_sendMessage(sci, SCI_UNDO, 0, 0);
 					return 0;
 				}
 				case IDM_EDIT_REDO:
 				{
 					void* sci = ctx().activeScintillaView();
-					if (sci) ScintillaBridge_sendMessage(sci, SCI_REDO, 0, 0);
+					if (sci && ScintillaBridge_sendMessage(sci, SCI_CANREDO, 0, 0))
+						ScintillaBridge_sendMessage(sci, SCI_REDO, 0, 0);
 					return 0;
 				}
 				case IDM_EDIT_CUT:

@@ -130,8 +130,6 @@ static const KeyToCommand macMapDefault[] = {
 	{Keys::Back,      SCI_CTRL,   Message::DelWordLeft},
 	{Keys::Back,      SCI_ALT,    Message::DelWordLeft},
 	{Keys::Back,      SCI_CSHIFT, Message::DelLineLeft},
-	{Key('z'),           SCI_CMD,    Message::Undo},
-	{Key('z'),           SCI_SCMD,   Message::Redo},
 	{Key('x'),           SCI_CMD,    Message::Cut},
 	{Key('c'),           SCI_CMD,    Message::Copy},
 	{Key('v'),           SCI_CMD,    Message::Paste},

@@ -77,3 +77,13 @@ void setChangeHistoryMarginVisible(void* sci, bool visible)
 	ScintillaBridge_sendMessage(sci, SCI_SETMARGINWIDTHN, CHANGE_HISTORY_MARGIN,
 		visible ? kChangeHistoryMarginWidth : 0);
 }
+
+void resetChangeHistory(void* sci)
+{
+	if (!sci) return;
+	// Cycle change history off and back on to clear all per-line markers.
+	// This mirrors the upstream Notepad_plus::clearChangesHistory() approach.
+	intptr_t flags = ScintillaBridge_sendMessage(sci, SCI_GETCHANGEHISTORY, 0, 0);
+	ScintillaBridge_sendMessage(sci, SCI_SETCHANGEHISTORY, SC_CHANGE_HISTORY_DISABLED, 0);
+	ScintillaBridge_sendMessage(sci, SCI_SETCHANGEHISTORY, flags, 0);
+}

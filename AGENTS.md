@@ -8,27 +8,25 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Build Commands
 
-### macOS Port (CMake + Xcode generator)
+### macOS Port (CMake)
 
-Working directory: `macos/build/`
+Working directory: `macos/build/`. The checked-in build directory is configured with the default Unix Makefiles generator and builds cleanly — don't wipe it just to switch generators. Binary location depends on the generator: `macos/build/PaperWasp` for Makefiles (single-config), `macos/build/{Debug,Release}/PaperWasp` for `-G Xcode` (pass `--config`).
 
 ```bash
-# First-time setup (or full clean rebuild)
 cd macos/build
-rm -rf *
-cmake -G Xcode ..
 
 # Build the app (development binary)
 cmake --build . --target PaperWasp
 
-# Build the .app bundle (for testing Finder integration, icon, etc.)
+# Build the .app bundle (for testing Finder integration, icon, etc.;
+# bundles ComparePlus + MarkdownViewerPlusPlus into Contents/PlugIns)
 cmake --build . --target PaperWasp_package
 
 # Build unsigned DMG for distribution
 cmake --build . --target PaperWasp_dmg
 
 # Build with code signing (opt-in, requires Developer ID certificate)
-cmake -G Xcode .. -DCODESIGN_ENABLED=ON -DCODESIGN_IDENTITY="Developer ID Application"
+cmake .. -DCODESIGN_ENABLED=ON -DCODESIGN_IDENTITY="Developer ID Application"
 cmake --build . --target PaperWasp_sign     # Sign .app bundle
 cmake --build . --target PaperWasp_dmg      # Build + sign DMG
 
@@ -40,13 +38,14 @@ export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 macos/scripts/sign-and-notarize.sh
 
 # Run the app (development build)
-./Debug/PaperWasp
+./PaperWasp
 
 # Run the packaged app
 open ../dist/PaperWasp.app
-```
 
-**Important:** Use the Xcode generator (`-G Xcode`). The default Makefiles generator fails on deeply nested object paths in this repo. The Xcode generator is required for reliable builds.
+# Full clean reconfigure (only if the build dir is broken)
+rm -rf * && cmake ..
+```
 
 ### MSBuild — Windows (primary, requires Visual Studio 2022 v143 toolset)
 
@@ -147,7 +146,9 @@ winmain.cpp (WinMain entry point)
 
 ### Plugin System
 
-Plugins are DLLs exporting a C interface defined in `PluginInterface.h`. Required exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`. Communication uses Windows messages defined in `Notepad_plus_msgs.h`.
+Plugins export a C interface defined in `PluginInterface.h`. Required exports: `setInfo`, `getName`, `getFuncsArray`, `beNotified`, `messageProc`, `isUnicode`. Communication uses Windows messages defined in `Notepad_plus_msgs.h`. On Windows plugins are DLLs; on macOS the same contract is kept, with plugins built as CMake `MODULE` targets producing `.dylib`s linked with `-undefined dynamic_lookup` so they resolve shim/Scintilla symbols from the host app at load time.
+
+Two ported plugins live at the repo root under `plugins/` (`comparePlus`, `markdownViewerPlusPlus`); `PaperWasp_package` bundles their dylibs into `PaperWasp.app/Contents/PlugIns`. When running the dev binary instead of the bundle, use the `install_compare_plus`, `install_markdown_viewer_plus_plus`, or `install_sample_plugin` targets, which copy each dylib to `~/Library/Application Support/PaperWasp/plugins/<Name>/<Name>.dylib` — the user-plugin load path. A minimal example plugin lives at `macos/plugin-sdk/example/HelloPaperWasp/`.
 
 ## Coding Style
 
