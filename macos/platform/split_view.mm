@@ -313,6 +313,12 @@ void doSplit()
 	if (srcIdx >= 0 && srcIdx < static_cast<int>(ctx().documents.size()))
 	{
 		ctx().documents2.push_back(ctx().documents[srcIdx]);
+		// Split creates an independent clone — clear the document pointer
+		// so restoreViewToScintilla uses the legacy SCI_SETTEXT path for
+		// the first load, and we create a fresh Document on next save.
+		// This matches upstream Notepad++ where split buffers have independent
+		// undo histories.
+		ctx().documents2[0].documentPtr = 0;
 		ctx().documents2[0].functionListDocumentId = allocateFunctionListDocumentId();
 		ctx().activeTab2 = 0;
 
@@ -330,7 +336,25 @@ void doSplit()
 
 		if (ctx().scintillaView2)
 		{
-			restoreViewToScintilla(ctx().scintillaView2, ctx().documents2, 0);
+			// Create an independent Scintilla Document for the split clone
+			// so it has its own undo/change history (matches upstream Notepad++).
+			auto& cloneDoc = ctx().documents2[0];
+			intptr_t docPtr = ScintillaBridge_sendMessage(ctx().scintillaView2,
+				SCI_CREATEDOCUMENT, 0, SC_DOCUMENTOPTION_TEXT_LARGE);
+			if (docPtr != 0)
+			{
+				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_SETDOCPOINTER, 0, docPtr);
+				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_SETTEXT, 0,
+					(intptr_t)cloneDoc.content.c_str());
+				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_SETSAVEPOINT, 0, 0);
+				ScintillaBridge_sendMessage(ctx().scintillaView2, SCI_GOTOPOS, 0, 0);
+				cloneDoc.documentPtr = docPtr;
+				cloneDoc.savePointValid = true;
+			}
+			else
+			{
+				restoreViewToScintilla(ctx().scintillaView2, ctx().documents2, 0);
+			}
 			applyLanguageToView(ctx().scintillaView2, ctx().documents2[0].languageIndex);
 		}
 	}
@@ -480,6 +504,17 @@ void doUnsplit()
 		migrateTabToView(0, doc);
 	}
 
+	// Release all Scintilla Document references held by view 2 before
+	// clearing.  Migrated documents were AddRef'd by migrateTabToView;
+	// skipped documents only have this reference and would leak otherwise.
+	{
+		void* anySci = ctx().scintillaView ? ctx().scintillaView : ctx().scintillaView2;
+		for (auto& d : ctx().documents2)
+		{
+			if (d.documentPtr != 0 && anySci)
+				ScintillaBridge_sendMessage(anySci, SCI_RELEASEDOCUMENT, 0, d.documentPtr);
+		}
+	}
 	ctx().documents2.clear();
 	ctx().activeTab2 = -1;
 	ctx().activeView = 0;
@@ -560,7 +595,18 @@ void doMoveToOtherView()
 	saveViewState(srcSci, srcDocs, srcTab);
 
 	DocumentData docCopy = srcDocs[srcTab];
-	addNewTabToView(dstView, docCopy.title, docCopy.content, docCopy.filePath, docCopy.languageIndex);
+
+	// Save destination view state before migration
+	{
+		void* dstSci = (dstView == 0) ? ctx().scintillaView : ctx().scintillaView2;
+		auto& dstDocsPre = (dstView == 0) ? ctx().documents : ctx().documents2;
+		int dstActivePre = (dstView == 0) ? ctx().activeTab : ctx().activeTab2;
+		saveViewState(dstSci, dstDocsPre, dstActivePre);
+	}
+
+	// Migrate to destination, preserving the backing Scintilla Document
+	// (and its undo/change history).  migrateTabToView AddRefs the document.
+	migrateTabToView(dstView, docCopy);
 
 	auto& dstDocs = (dstView == 0) ? ctx().documents : ctx().documents2;
 	int dstIdx = static_cast<int>(dstDocs.size()) - 1;
@@ -578,6 +624,9 @@ void doMoveToOtherView()
 		if (dstSci)
 			ScintillaBridge_sendMessage(dstSci, SCI_SETREADONLY, docCopy.readOnly ? 1 : 0, 0);
 	}
+
+	// Activate the new tab in the destination view
+	switchToTabInView(dstView, dstIdx);
 
 	closeTabFromView(srcView, srcTab);
 }

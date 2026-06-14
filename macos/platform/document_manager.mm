@@ -8,6 +8,7 @@
 #include "lexer_styles.h"
 #include "scintilla_bridge.h"
 #include "scintilla_config.h"
+#include "change_history.h"
 #include "smart_highlight.h"
 #include "incremental_search.h"
 #include "document_map.h"
@@ -43,6 +44,9 @@ void saveViewState(void* sci, std::vector<DocumentData>& docs, int tabIdx)
 	if (!sci) return;
 
 	auto& doc = docs[tabIdx];
+
+	// Always sync the content cache — used by clone/move, function list,
+	// follow mode, and save-prompt dirty checks.
 	intptr_t len = ScintillaBridge_sendMessage(sci, SCI_GETTEXTLENGTH, 0, 0);
 	if (len >= 0)
 	{
@@ -85,6 +89,37 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 	auto& doc = docs[tabIndex];
 	ctx().suppressSavePointNotifications = true;
 	ctx().suppressFollowTracking = true;
+
+	if (doc.documentPtr != 0)
+	{
+		// Document-backed tab: swap the Scintilla view to this tab's
+		// Document.  Undo history, change history, and bookmarks live
+		// in the Document and survive the swap automatically.
+		intptr_t curDoc = ScintillaBridge_sendMessage(sci, SCI_GETDOCPOINTER, 0, 0);
+		if (curDoc != doc.documentPtr)
+		{
+			ScintillaBridge_sendMessage(sci, SCI_SETDOCPOINTER, 0, doc.documentPtr);
+		}
+
+		ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
+		ScintillaBridge_sendMessage(sci, SCI_SETFIRSTVISIBLELINE, doc.firstVisibleLine, 0);
+		ScintillaBridge_sendMessage(sci, SCI_SETSEL, doc.anchorPos, doc.cursorPos);
+		// No SCI_SETTEXT, no SCI_EMPTYUNDOBUFFER — undo history and change
+		// history are preserved in the Document object.
+
+		doc.savePointValid = true; // Document pointer preserves the real save point
+		ctx().suppressFollowTracking = false;
+		ctx().suppressSavePointNotifications = false;
+
+		ScintillaBridge_sendMessage(sci, SCI_SETZOOM, doc.zoomLevel, 0);
+		ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, doc.readOnly ? 1 : 0, 0);
+		refreshLineNumberMargin(sci);
+		return;
+	}
+
+	// Legacy path: for tabs without a backing Scintilla Document.
+	// Disable change history during SCI_SETTEXT to avoid false markers
+	// on every line, then re-enable it afterwards.
 	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
 	ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)doc.content.c_str());
 	if (!doc.modified)
@@ -106,6 +141,8 @@ void restoreViewToScintilla(void* sci, std::vector<DocumentData>& docs, int tabI
 	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, doc.readOnly ? 1 : 0, 0);
 
 	refreshLineNumberMargin(sci);
+	// Clear false change-history markers caused by SCI_SETTEXT
+	resetChangeHistory(sci);
 }
 
 void restoreScintillaState(int tabIndex)
@@ -192,8 +229,34 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 	doc.functionListDocumentId = allocateFunctionListDocumentId();
 	doc.functionListRevision = 0;
 	doc.bufferId = allocateBufferId();
-	docs.push_back(doc);
 
+	// Create a Scintilla Document to back this tab.  Undo history and
+	// change history live in the Document and survive tab switches.
+	ctx().suppressSavePointNotifications = true;
+	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
+	intptr_t newDocPtr = ScintillaBridge_sendMessage(sci, SCI_CREATEDOCUMENT, 0,
+		SC_DOCUMENTOPTION_TEXT_LARGE);
+	if (newDocPtr != 0)
+	{
+		ScintillaBridge_sendMessage(sci, SCI_SETDOCPOINTER, 0, newDocPtr);
+		ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)content.c_str());
+		ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+		doc.documentPtr = newDocPtr;
+		doc.savePointValid = true;
+	}
+	else
+	{
+		// Fallback: if SCI_CREATEDOCUMENT fails, use the legacy
+		// no-document path.
+		ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)content.c_str());
+		ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+		ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
+		doc.savePointValid = !doc.modified;
+	}
+	ScintillaBridge_sendMessage(sci, SCI_GOTOPOS, 0, 0);
+	ctx().suppressSavePointNotifications = false;
+
+	docs.push_back(doc);
 	int newIndex = static_cast<int>(docs.size()) - 1;
 
 	if (tabHwnd)
@@ -209,14 +272,6 @@ int addNewTabToView(int viewIndex, const std::wstring& title, const std::string&
 	}
 
 	activeTab = newIndex;
-
-	ctx().suppressSavePointNotifications = true;
-	ScintillaBridge_sendMessage(sci, SCI_SETREADONLY, 0, 0);
-	ScintillaBridge_sendMessage(sci, SCI_SETTEXT, 0, (intptr_t)content.c_str());
-	ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
-	ScintillaBridge_sendMessage(sci, SCI_GOTOPOS, 0, 0);
-	ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
-	ctx().suppressSavePointNotifications = false;
 
 	applyLanguageToView(sci, langIndex);
 	if (viewIndex == ctx().activeView)
@@ -270,14 +325,34 @@ void closeTabFromView(int viewIndex, int tabIndex)
 	{
 		if (docs[0].functionListDocumentId != 0)
 			invalidateFunctionListCacheForDocument(docs[0].functionListDocumentId);
+
+		// Release the old Scintilla Document if one exists
+		if (docs[0].documentPtr != 0)
+		{
+			ScintillaBridge_sendMessage(sci, SCI_RELEASEDOCUMENT, 0, docs[0].documentPtr);
+		}
+
 		docs[0] = DocumentData();
 		docs[0].functionListDocumentId = allocateFunctionListDocumentId();
 		docs[0].functionListRevision = 0;
 		docs[0].bufferId = allocateBufferId();
+
 		ctx().suppressSavePointNotifications = true;
-		ScintillaBridge_sendMessage(sci, SCI_CLEARALL, 0, 0);
-		ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
-		ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+		// Create a fresh empty Scintilla Document for the replacement tab
+		intptr_t newDoc = ScintillaBridge_sendMessage(sci, SCI_CREATEDOCUMENT, 0,
+			SC_DOCUMENTOPTION_TEXT_LARGE);
+		if (newDoc != 0)
+		{
+			ScintillaBridge_sendMessage(sci, SCI_SETDOCPOINTER, 0, newDoc);
+			ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+			docs[0].documentPtr = newDoc;
+		}
+		else
+		{
+			ScintillaBridge_sendMessage(sci, SCI_CLEARALL, 0, 0);
+			ScintillaBridge_sendMessage(sci, SCI_EMPTYUNDOBUFFER, 0, 0);
+			ScintillaBridge_sendMessage(sci, SCI_SETSAVEPOINT, 0, 0);
+		}
 		ScintillaBridge_sendMessage(sci, SCI_SETZOOM, 0, 0);
 		ctx().suppressSavePointNotifications = false;
 		if (tabHwnd)
@@ -306,6 +381,13 @@ void closeTabFromView(int viewIndex, int tabIndex)
 	if (tabHwnd)
 		SendMessageW(tabHwnd, TCM_DELETEITEM, tabIndex, 0);
 	invalidateFunctionListCacheForDocument(docs[tabIndex].functionListDocumentId);
+
+	// Release the Scintilla Document backing this tab before erasing
+	if (docs[tabIndex].documentPtr != 0)
+	{
+		ScintillaBridge_sendMessage(sci, SCI_RELEASEDOCUMENT, 0, docs[tabIndex].documentPtr);
+	}
+
 	docs.erase(docs.begin() + tabIndex);
 
 	if (tabIndex < activeTab)
@@ -359,6 +441,16 @@ void migrateTabToView(int viewIndex, const DocumentData& doc)
 	// Only allocate a new one if the source didn't have one.
 	if (newDoc.functionListDocumentId == 0)
 		newDoc.functionListDocumentId = allocateFunctionListDocumentId();
+
+	// If the source has a backing Scintilla Document, add a reference for
+	// the destination view so the document survives source-tab removal.
+	if (newDoc.documentPtr != 0)
+	{
+		void* anySci = ctx().scintillaView ? ctx().scintillaView : ctx().scintillaView2;
+		if (anySci)
+			ScintillaBridge_sendMessage(anySci, SCI_ADDREFDOCUMENT, 0, newDoc.documentPtr);
+	}
+
 	docs.push_back(newDoc);
 
 	int newIndex = static_cast<int>(docs.size()) - 1;

@@ -12,3 +12,7 @@ void applyChangeHistoryColors(void* sci, bool isDark);
 
 // Show or hide the change-history margin on a single view.
 void setChangeHistoryMarginVisible(void* sci, bool visible);
+
+// Clear all change history per-line markers by cycling the feature off/on.
+// Call after programmatic text replacement (SCI_SETTEXT) to avoid false markers.
+void resetChangeHistory(void* sci);

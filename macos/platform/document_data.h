@@ -55,6 +55,7 @@ struct DocumentData
 	bool readOnly = false;
 	int languageIndex = 2; // Default: C++
 	std::vector<int> bookmarkedLines; // Persisted across tab switches
+	intptr_t documentPtr = 0; // Scintilla Document* (via SCI_CREATEDOCUMENT); preserves undo/change history across tab switches
 	int encoding = ENC_UTF8;
 	int eolMode = SC_EOL_LF;
 	int zoomLevel = 0;
